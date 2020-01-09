@@ -1,0 +1,57 @@
+{
+  "name": "uman",
+  "version": "0.3.0",
+  "type": "module",
+  "exports": "./src/index.js",
+  "main": "./dist/index.js",
+  "description": "Units manager javascript library to orchestrate web workers",
+  "author": "Grigory Schurovski <greorex@outlook.com> (https://github.com/greorex)",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/greorex/uman",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/greorex/uman"
+  },
+  "bugs": {
+    "url": "https://github.com/greorex/uman/issues"
+  },
+  "keywords": [
+    "uman",
+    "units",
+    "thread",
+    "multithreading",
+    "worker",
+    "web worker",
+    "code splitting",
+    "lazy loading"
+  ],
+  "scripts": {
+    "dev": "./node_modules/.bin/nodemon --watch ./src --ext js --exec 'npm run build:dev'",
+    "build:dev": "webpack",
+    "build": "NODE_ENV='production' webpack",
+    "test": "jest",
+    "prepare": "npm run build",
+    "trypublish": "npm publish || true"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@babel/core": "^7.7.7",
+    "@babel/plugin-proposal-class-properties": "^7.7.4",
+    "@babel/preset-env": "^7.7.7",
+    "babel-loader": "^8.0.6",
+    "babel-preset-minify": "^0.5.1",
+    "jest": "^24.9.0",
+    "nodemon": "^2.0.2",
+    "prettier": "^1.19.1",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
+  },
+  "browserslist": [
+    "since 2017-06"
+  ],
+  "jest": {
+    "watchPathIgnorePatterns": [
+      "<rootDir>/node_modules/"
+    ]
+  }
+}
