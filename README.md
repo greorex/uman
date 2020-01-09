@@ -1,6 +1,6 @@
  <div align="center">
-  <h2>Units manager javascript library</h2>
-  <blockquote>Allows to easily split your code with web workers</blockquote>
+  <h1>Units Manager</h1>
+  <p><i>A javascript library to split your code with web workers</i></p>
  
  <!--
  <a href="https://github.com/greorex/uman/actions"><img alt="Build Status" src="https://github.com/greorex/uman/workflows/Build/badge.svg?color=green" /></a> <a href="https://github.com/greorex/uman/actions"> <img alt="Publish Status" src="https://github.com/greorex/uman/workflows/Publish/badge.svg?color=green" /></a> <img src="https://api.dependabot.com/badges/status?host=github&repo=greorex/uman" />
@@ -38,12 +38,12 @@ This unit will be in the main thread.
 import { Unit } from "uman";
 
 export default class UnitOne extends Unit {
-  // returns sum of array elements
+  // returns sum of array's elements
   sum(arr) {
     return arr.reduce((r, i) => (r += i), 0);
   }
 
-  // returns sum of cubes of array elements
+  // returns sum of cubes of array's elements
   // it doesn't calc cubes but Unit Two does
   async sumofcubes(arr) {
     const cubes = await this.units.two.cubes(arr);
@@ -62,7 +62,7 @@ This unit will be as web worker unit.
 import { UnitSelf } from "uman";
 
 class UnitTwo extends UnitSelf {
-  // returns cubes of array elements
+  // returns cubes of array's elements
   cubes(arr) {
     return arr.map(i => i ** 3);
   }
@@ -167,7 +167,7 @@ uman.units.test.run().then(result => {
 });
 ```
 
-That's all.
+Thats all.
 
 ## Contacts
 

@@ -40,9 +40,9 @@ export class TargetType {
 class UnitBase {
   constructor() {
     // manager engine
-    this.Name = "";
+    this.name = "";
     // to set 'on...' in constructor
-    this.Units = this._proxyUnits();
+    this.units = this._proxyUnits();
     this._unitsProxy = {};
   }
 
@@ -69,8 +69,8 @@ class UnitBase {
 
   _proxyUnits() {
     // unit's fast access to other units
-    // 1. unit.Units.emit(method, payload) -> to all units
-    // const other = unit.Units.other;
+    // 1. unit.units.emit(method, payload) -> to all units
+    // const other = unit.units.other;
     // 2. other.emit(method, payload) -> to other
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(payload)
@@ -125,7 +125,7 @@ class UnitBase {
           // do if exists
           // trick to have short 'on...'
           if (sender) {
-            // unit.Units.sender.onmethod(payload)
+            // unit.units.sender.onmethod(payload)
             // priority #1
             const p = this._unitsProxy[sender];
             if (p) {
@@ -280,7 +280,7 @@ export class UnitsManager {
     // copy entries
     this._copyUnitsEntry(units);
     // lazy loading engine
-    this.Units = this._proxyUnits();
+    this.units = this._proxyUnits();
   }
 
   _proxyUnits() {
@@ -301,10 +301,10 @@ export class UnitsManager {
     if (!(unit instanceof UnitBase))
       throw new Error("Wrong class of unit: " + name);
     // attach
-    unit.Name = name;
+    unit.name = name;
     // override to redispatch
     unit._redispatch = async data => {
-      data.sender = unit.Name;
+      data.sender = unit.name;
       // redispatch
       return this._redispatch(data);
     };
@@ -345,7 +345,7 @@ export class UnitsManager {
 
       default:
         // load if doesn't
-        const u = this.Units[target];
+        const u = this.units[target];
         if (u instanceof UnitBase) return u._dispatch(data);
     }
 
