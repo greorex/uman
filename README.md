@@ -121,11 +121,11 @@ export default class UnitLog extends Unit {
 
     // it will catch log event
     this.units.test.onlog = message => {
-      this.log(message);
+      this.render(message);
     };
   }
 
-  log(message) {
+  render(message) {
     console.log(message);
   }
 }
@@ -162,7 +162,7 @@ uman.addUnits({
 
 // run test and then delete it
 uman.units.test.run().then(result => {
-  uman.units.log("Test " + result);
+  uman.units.log.render("Test " + result);
   uman.deleteUnit("test");
 });
 ```
