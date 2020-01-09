@@ -10,7 +10,7 @@
   "homepage": "https://github.com/greorex/uman",
   "repository": {
     "type": "git",
-    "url": "https://github.com/greorex/uman"
+    "url": "https://github.com/greorex/uman.git"
   },
   "bugs": {
     "url": "https://github.com/greorex/uman/issues"
