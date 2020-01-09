@@ -9,7 +9,9 @@
 
 ## About
 
-Being a small but robust javascript library, the Uman lets easily split your code by separarted modules - units. Even more, you may define units as web workers to have pure multithreading way of programming. With the Uman you don't need to think how to orginize communication between units. Everything is simple as if you code in asynchronous way.
+Being a small but robust javascript library, the Uman lets easily split your code by separarted modules - units. Even more, you may define units as web workers to have pure multithreading way of programming. With the Uman you don't have to think about communication between workers.
+
+Everything is as simple as if you code in asynchronous way.
 
 ## Features
 
@@ -131,7 +133,7 @@ export default class UnitLog extends Unit {
 }
 ```
 
-### Run test
+### Run
 
 Add units to the manager in the main script.
 
@@ -169,10 +171,89 @@ uman.units.test.run().then(result => {
 
 Thats all.
 
+## API Reference
+
+### UnitsManager
+
+Class to create manager
+
+```javascript
+UnitsManager(units: Object like {
+  // 1) created Unit
+  name: new Unit(),
+  // 2) will be created on demand
+  name: () => return new Unit(),
+  // 3) will be run on demand
+  name: () => {
+    const worker = new Worker(url, options);
+    return new UnitWorker(worker);
+  }
+})
+
+addUnits(units: see constructor) : UnitsManager
+
+deleteUnit(name: string)
+
+deleteAllUnits()
+```
+
+### Unit
+
+Class to create unit in the main thread
+
+```javascript
+Unit();
+```
+
+### UnitWorker
+
+Class to run unit as web worker
+
+```javascript
+UnitWorker(worker: Worker(url, options))
+```
+
+### UnitSelf
+
+Class to write script of web worker
+
+```javascript
+UnitSelf();
+```
+
+### Property "units"
+
+Each class has special property
+
+```javascript
+units: Object;
+```
+
+1. to call "other" unit
+
+```javascript
+async units.other(...args);
+```
+
+2. to catch event from "other" unit
+
+```javascript
+units.other.onevent = payload => {};
+```
+
+## TODO
+
+- arguments and return values proxies
+- service worker class support
+- node.js support
+- communication with server units
+
 ## Contacts
 
 Fill free to contact me if you need help with customization or installation.
 
 ## License
 
-Apache-2.0
+Copyright © 2019 Grigory Schurovski
+
+Licensed under the [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0) license.
