@@ -88,7 +88,7 @@ class UnitTest extends UnitSelf {
 
     // call method "sum" of Unit One
     const sum = await one.sum(arr);
-    // and fire event "log" to the Unit Log
+    // and fire event "log" to all units
     this.emit("log", "Sum of " + arr + " = " + sum);
 
     const cubes = await this.units.two.cubes(arr);
@@ -120,7 +120,7 @@ export default class UnitLog extends Unit {
   constructor() {
     super();
 
-    // it will catch log event
+    // to catch "log" event from test
     this.units.test.onlog = message => {
       this.render(message);
     };
