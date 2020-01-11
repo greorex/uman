@@ -84,21 +84,22 @@ import { UnitSelf } from "uman";
 
 class UnitTest extends UnitSelf {
   async run(arr) {
-    const one = this.units.one;
+    const units = this.units;
+    const one = units.one;
 
     // call method "sum" of Unit One
     const sum = await one.sum(arr);
     // and fire event "log" to all units
-    this.emit("log", "Sum of " + arr + " = " + sum);
+    units.emit("log", "Sum of " + arr + " = " + sum);
 
-    const cubes = await this.units.two.cubes(arr);
-    this.emit("log", "Cubes of " + arr + " = " + cubes);
+    const cubes = await units.two.cubes(arr);
+    units.emit("log", "Cubes of " + arr + " = " + cubes);
 
     const sumofcubes1 = await one.sumofcubes(arr);
-    this.emit("log", "Sum of cubes of " + arr + " = " + sumofcubes);
+    units.emit("log", "Sum of cubes of " + arr + " = " + sumofcubes);
 
     const sumofcubes2 = await one.sum(cubes);
-    this.emit("log", "Sum of " + cubes + " = " + sumofcubes);
+    units.emit("log", "Sum of " + cubes + " = " + sumofcubes);
 
     return sumofcubes1 === sumofcubes2 ? "passed" : "failed";
   }
@@ -162,7 +163,7 @@ uman.addUnits({
 });
 
 // run test and then delete it
-uman.units.test.run().then(result => {
+uman.units.test.run([2, 3, 4]).then(result => {
   uman.units.log.render("Test " + result);
   uman.deleteUnit("test");
 });

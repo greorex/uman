@@ -1,5 +1,6 @@
 const path = require("path");
 const webpack = require("webpack");
+const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 const {
   version,
@@ -21,14 +22,12 @@ const banner = `
   LICENSE file in the root directory of this source tree.
 `;
 
-const isProduction = process.env.NODE_ENV === "production";
-
-const webpackConfig = {
-  mode: isProduction ? "production" : "development",
-  devtool: isProduction ? "source-map" : "eval-source-map",
+module.exports = {
+  mode: "none",
+  devtool: "source-map",
   entry: "./src/index.js",
   output: {
-    filename: isProduction ? "index.min.js" : "index.js",
+    filename: "index.js",
     path: path.resolve(__dirname, "dist"),
     library: "uman",
     libraryTarget: "umd",
@@ -39,11 +38,16 @@ const webpackConfig = {
       {
         test: /\.m?js$/,
         exclude: /(node_modules)/,
-        loader: "babel-loader"
+        loader: "babel-loader",
+        options: {
+          comments: false,
+          sourceType: "module",
+          plugins: [
+            ["@babel/plugin-proposal-class-properties", { loose: true }]
+          ]
+        }
       }
     ]
   },
-  plugins: [new webpack.BannerPlugin(banner)]
+  plugins: [new CleanWebpackPlugin(), new webpack.BannerPlugin(banner)]
 };
-
-module.exports = webpackConfig;

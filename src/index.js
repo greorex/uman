@@ -8,14 +8,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// @ts-check
-
-// TODO - write tests (80%, direct calls)
+// TODO - add easy method call (80%, direct calls?)
+// TODO - add lazy loading (80%, lazy import?)
+// TODO - add timeout for request (80%, long calls failed?)
+// TODO - add transferable objects (80%,through proxies?)
+// TODO - add Unit auto class trigger (100%)
 // TODO - split by files (0%)
-// TODO - add easy method call (80%, direct calls)
-// TODO - add lazy loading (80%, lazy import)
-// TODO - add args and returns proxies (0%)
+// TODO - add args and return proxies (0%)
+// TODO - add service worker support (0%)
 // TODO - add node.js support (0%)
+// TODO - add communication with server units (0%)
+
+// @ts-check
 
 /**
  * message types enum
@@ -24,6 +28,7 @@ export class MessageType {
   static EVENT = "event";
   static REQUEST = "request";
   static RESPONSE = "response";
+  static RECEIPT = "receipt";
 }
 
 /**
@@ -37,8 +42,9 @@ export class TargetType {
 /**
  * unit base call engine
  */
-class UnitBase {
+export class UnitBase {
   constructor() {
+    this.options = {};
     // manager engine
     this.name = "";
     // to set 'on...' in constructor
@@ -120,30 +126,27 @@ class UnitBase {
         return this[method](...payload);
 
       case MessageType.EVENT:
-        // don't stop execution
-        setTimeout(() => {
-          // do if exists
-          // trick to have short 'on...'
-          if (sender) {
-            // unit.units.sender.onmethod(payload)
-            // priority #1
-            const p = this._unitsProxy[sender];
-            if (p) {
-              const m = `on${method}`;
-              if (m in p) p[m](payload);
-            }
-
-            // onsendermethod(payload)
-            // priority #2
-            const m = `on${sender}${method}`;
-            if (m in this) this[m](payload);
+        // do if exists
+        // trick to have short 'on...'
+        if (sender) {
+          // unit.units.sender.onmethod(payload)
+          // priority #1
+          const p = this._unitsProxy[sender];
+          if (p) {
+            const m = `on${method}`;
+            if (m in p && p[m](payload)) return;
           }
 
-          // raw call 'onmethod(eventobject)'
-          // priority #3
-          const m = `on${method}`;
-          if (m in this) this[m](data);
-        });
+          // onsendermethod(payload)
+          // priority #2
+          const m = `on${sender}${method}`;
+          if (m in this && this[m](payload)) return;
+        }
+
+        // raw call 'onmethod(eventobject)'
+        // priority #3
+        const m = `on${method}`;
+        if (m in this && this[m](data)) return;
     }
   }
 
@@ -166,11 +169,15 @@ class UnitWorkerEngine extends UnitBase {
     this._c = {}; // calls
     this._n = 0; // next call index
 
+    this.options.timeout = 0; // 1000;
+
     // attach engine (worker or worker self instance)
-    this.postMessage = message => engine.postMessage(message);
+    // ...args to support transferable objects
+    this.postMessage = (...args) => {
+      engine.postMessage(...args);
+    };
     engine.onmessage = event => {
-      // don't stop execution
-      setTimeout(() => this._onmessage(event));
+      this._onmessage(event);
     };
   }
 
@@ -179,7 +186,7 @@ class UnitWorkerEngine extends UnitBase {
   _onmessage(event) {
     const { data } = event;
     // is this our message?
-    if (data && data instanceof Object) {
+    if (data instanceof Object) {
       switch (data.type) {
         case MessageType.EVENT:
           return this._oncall(data);
@@ -187,27 +194,49 @@ class UnitWorkerEngine extends UnitBase {
           return this._onrequest(data);
         case MessageType.RESPONSE:
           return this._onresponse(data);
+        case MessageType.RECEIPT:
+          return this._clearTimeout(data);
       }
     }
     // call standard listener
-    return this.onmessage(event);
+    this.onmessage(event);
+  }
+
+  _clearTimeout(data) {
+    // restore call
+    const c = this._c[data.cid];
+    if (!c) return;
+    const { timeout } = c;
+    // drop the timer
+    timeout && clearTimeout(timeout);
   }
 
   async _dispatch(data) {
-    const _this = this;
     switch (data.type) {
       case MessageType.EVENT:
         // just post
-        return _this.postMessage(data);
+        return this.postMessage(data);
       case MessageType.REQUEST:
-        // set call id
-        data.cid = ++this._n;
         // post with promise
+        const _this = this;
         return new Promise((resolve, reject) => {
           // store call
-          _this._c[data.cid] = {
+          _this._c[(data.cid = ++_this._n)] = {
             resolve,
-            reject
+            reject,
+            // just in case no receiver
+            timeout: !this.options.timeout
+              ? 0
+              : setTimeout(() => {
+                  _this._onresponse({
+                    cid: data.cid,
+                    error:
+                      "Timeout on request " +
+                      data.method +
+                      " from " +
+                      data.sender
+                  });
+                }, _this.options.timeout)
           };
           _this.postMessage(data);
         });
@@ -216,15 +245,22 @@ class UnitWorkerEngine extends UnitBase {
 
   async _onrequest(data) {
     const response = {
-      type: MessageType.RESPONSE,
       cid: data.cid
     };
+
+    // receipt
+    response.type = MessageType.RECEIPT;
+    this.postMessage(response);
+
+    // call
     try {
       response.result = await this._oncall(data);
     } catch (error) {
       response.error = error;
     }
+
     // response
+    response.type = MessageType.RESPONSE;
     this.postMessage(response);
   }
 
@@ -234,20 +270,15 @@ class UnitWorkerEngine extends UnitBase {
     const c = this._c[cid];
     if (!c) return;
     // remove call
+    this._clearTimeout(data);
     delete this._c[cid];
     // promise's time
-    if (!error && c.resolve) c.resolve(result);
-    if (error && c.reject) c.reject(new Error(error));
+    error ? c.reject(new Error(error)) : c.resolve(result);
   }
 }
 
 /**
- * main thread unit base
- */
-export class Unit extends UnitBase {}
-
-/**
- * main thread unit worker base
+ * unit base for worker adapter
  */
 export class UnitWorker extends UnitWorkerEngine {
   constructor(worker) {
@@ -263,11 +294,36 @@ export class UnitWorker extends UnitWorkerEngine {
 }
 
 /**
- * worker file unit base
+ * unit base for worker script file
  */
-export class UnitSelf extends UnitWorkerEngine {
+export class UnitWorkerSelf extends UnitWorkerEngine {
   constructor(engine = self) {
     super(engine);
+  }
+}
+
+/**
+ * determines unit base class by globalThis
+ */
+const _unitAutoClass = () => {
+  if (
+    self &&
+    !self.window &&
+    self.postMessage instanceof Function &&
+    self.importScripts instanceof Function
+  )
+    return UnitWorkerSelf;
+  return UnitBase;
+};
+
+/**
+ * unit with autoselected base class
+ */
+export class Unit extends _unitAutoClass() {
+  static use(unitClass) {
+    if (_unitAutoClass() === UnitWorkerSelf) {
+      return new unitClass();
+    }
   }
 }
 
@@ -275,7 +331,7 @@ export class UnitSelf extends UnitWorkerEngine {
  * units orchestration engine
  */
 export class UnitsManager {
-  constructor(units) {
+  constructor(units = {}) {
     this._units = {};
     // copy entries
     this._copyUnitsEntry(units);
@@ -298,6 +354,14 @@ export class UnitsManager {
   }
 
   _attachUnit(name, unit) {
+    if (unit instanceof Promise) {
+      // resolve it
+      unit = (async () => {
+        const result = await unit.then();
+        console.log(result.default);
+        return new result.default();
+      })();
+    }
     if (!(unit instanceof UnitBase))
       throw new Error("Wrong class of unit: " + name);
     // attach
