@@ -1,18 +1,19 @@
-import { Unit } from "../../src";
+import { Unit } from "./../uman";
 
-export default class UnitLog extends Unit {
-  constructor() {
-    super();
+export default Unit.instance(
+  class extends Unit {
+    constructor() {
+      super();
 
-    // to catch "log" event from test
-    this.units.test.onlog = message => {
-      this.render(message);
-    };
+      // to catch "log" event from tests
+      this.units.tests.onlog = message => {
+        // and render it
+        this.render(message);
+      };
+    }
+
+    render(message) {
+      console.log(message);
+    }
   }
-
-  render(message) {
-    console.log(message);
-  }
-}
-
-Unit.use(UnitLog);
+);

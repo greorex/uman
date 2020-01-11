@@ -1,43 +1,32 @@
-import { UnitsManager, Unit, UnitWorker } from "./../src";
-// import UnitOne from "./units/one";
-import UnitLog from "./units/log";
+import { UnitsManager, Unit } from "./uman";
 
-// add units
-const uman = new UnitsManager({
-  // one: () => new UnitOne(),
-  one: () => {
-    const worker = new Worker("./units/one.js", { type: "module" });
-    return new UnitWorker(worker);
-  },
-  two: () => import("./units/two")
-  // two: () => {
-  //   const worker = new Worker("./units/two.js", { type: "module" });
-  //   return new UnitWorker(worker);
-  // }
-});
-
-// add test and log units later
-uman.addUnits({
-  test: () => {
-    const worker = new Worker("./units/test.js", { type: "module" });
-    return new UnitWorker(worker);
-  },
-  log: () => new UnitLog()
-});
-
+// main class to run app
 class MainUnit extends Unit {
   async run() {
-    const result = await this.units.test.run([2, 3, 4]);
+    const result = await this.units.tests.run([2, 3, 4]);
     this.units.log.render("Test " + result);
-    uman.deleteUnit("test");
+    uman.deleteUnit("tests");
   }
 }
 
-Unit.use(MainUnit);
-
 // add main unit
-uman.addUnits({
+const uman = new UnitsManager({
+  // direct instance
   main: new MainUnit()
+});
+
+import TwoUnit from "./units/two";
+
+// add units
+uman.addUnits({
+  // worker thread
+  one: () => new Worker("./units/one.js", { type: "module" }),
+  // create on demand
+  two: () => new TwoUnit(),
+  // other worker thread
+  tests: () => new Worker("./units/tests.js", { type: "module" }),
+  // lazy import
+  log: () => import("./units/log")
 });
 
 // run

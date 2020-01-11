@@ -9,10 +9,11 @@
  */
 
 // TODO - add easy method call (80%, direct calls?)
-// TODO - add lazy loading (80%, lazy import?)
+// TODO - add lazy loading (100%)
 // TODO - add timeout for request (80%, long calls failed?)
 // TODO - add transferable objects (80%,through proxies?)
 // TODO - add Unit auto class trigger (100%)
+// TODO - add units dependancy (0%)
 // TODO - split by files (0%)
 // TODO - add args and return proxies (0%)
 // TODO - add service worker support (0%)
@@ -169,7 +170,7 @@ class UnitWorkerEngine extends UnitBase {
     this._c = {}; // calls
     this._n = 0; // next call index
 
-    this.options.timeout = 0; // 1000;
+    this.options.timeout = 5000;
 
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
@@ -320,10 +321,9 @@ const _unitAutoClass = () => {
  * unit with autoselected base class
  */
 export class Unit extends _unitAutoClass() {
-  static use(unitClass) {
-    if (_unitAutoClass() === UnitWorkerSelf) {
-      return new unitClass();
-    }
+  static instance(unitClass) {
+    if (_unitAutoClass() === UnitWorkerSelf) return new unitClass();
+    return unitClass;
   }
 }
 
@@ -346,22 +346,36 @@ export class UnitsManager {
         // unit asked?
         if (value instanceof UnitBase) return value;
         // isn't loaded? call loader
-        if (value instanceof Function) return this._attachUnit(prop, value());
+        if (value instanceof Function) return this._attachUnit(prop, value);
         // as is
         return value;
       }
     });
   }
 
-  _attachUnit(name, unit) {
-    if (unit instanceof Promise) {
-      // resolve it
-      unit = (async () => {
-        const result = await unit.then();
-        console.log(result.default);
-        return new result.default();
-      })();
+  _attachUnit(name, value) {
+    let unit;
+    // case function
+    if (value instanceof Function) value = value();
+    // case worker
+    if (value instanceof Worker) unit = new UnitWorker(value);
+    // case promise
+    if (value instanceof Promise) {
+      unit = new UnitBase();
+      // resolve it later
+      unit._dispatch = async data => {
+        let u = await value.then();
+        // may be as 'export default class'
+        if (u.default instanceof Function) u = new u.default();
+        // reatach
+        u = this._attachUnit(unit.name, u);
+        // call proper method
+        return u._dispatch(data);
+      };
     }
+    // default
+    if (!unit) unit = value;
+    // finaly unit has to be as
     if (!(unit instanceof UnitBase))
       throw new Error("Wrong class of unit: " + name);
     // attach
@@ -386,8 +400,8 @@ export class UnitsManager {
       if (typeof name != "string" || name === "emit")
         throw new Error("Wrong unit name: " + name);
       // check unit
-      if (unit instanceof Function) this._units[name] = unit;
-      else if (unit instanceof UnitBase) this._attachUnit(name, unit);
+      if (unit instanceof UnitBase) this._attachUnit(name, unit);
+      else if (unit instanceof Function) this._units[name] = unit;
       else throw new Error("Wrong unit value: " + unit);
     }
   }

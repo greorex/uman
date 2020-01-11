@@ -1,7 +1,12 @@
 {
   "name": "uman",
-  "version": "0.3.0",
-  "main": "./dist/index.js",
+  "version": "0.4.0",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.js",
+  "files": [
+    "src/",
+    "dist/"
+  ],
   "description": "Units manager javascript library to orchestrate web workers",
   "author": "Grigory Schurovski <greorex@outlook.com> (https://github.com/greorex)",
   "license": "Apache-2.0",
@@ -25,7 +30,7 @@
   ],
   "scripts": {
     "dev": "webpack-dev-server --config webpack.config.dev.js --open",
-    "build": "webpack",
+    "build": "rollup -c",
     "test": "jest",
     "publish": "npm publish || true"
   },
@@ -33,22 +38,19 @@
   "devDependencies": {
     "@babel/core": "^7.7.7",
     "@babel/plugin-proposal-class-properties": "^7.7.4",
-    "@babel/plugin-transform-runtime": "^7.7.6",
     "@babel/preset-env": "^7.7.7",
-    "@babel/runtime": "^7.7.7",
     "babel-loader": "^8.0.6",
     "clean-webpack-plugin": "^3.0.0",
     "html-webpack-plugin": "^3.2.0",
     "jest": "^24.9.0",
     "prettier": "^1.19.1",
+    "rollup": "^1.29.0",
+    "rollup-plugin-babel": "^4.3.3",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
     "worker-plugin": "^3.2.0"
   },
-  "browserslist": [
-    "since 2017-06"
-  ],
   "jest": {
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules/"

@@ -1,9 +1,8 @@
 const path = require("path");
-const webpack = require("webpack");
+const WorkerPlugin = require("worker-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const WorkerPlugin = require("worker-plugin");
-const { name } = require("./package.json");
+const { name, version } = require("./package.json");
 
 module.exports = {
   mode: "development",
@@ -18,22 +17,14 @@ module.exports = {
       {
         test: /\.m?js$/,
         exclude: /(node_modules)/,
-        loader: "babel-loader",
-        options: {
-          comments: false,
-          presets: [["@babel/preset-env"]],
-          plugins: [
-            ["@babel/plugin-transform-runtime"],
-            ["@babel/plugin-proposal-class-properties", { loose: true }]
-          ]
-        }
+        loader: "babel-loader"
       }
     ]
   },
   plugins: [
     new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
-      title: `Development of ${name}`
+      title: `${name}, v${version}, development`
     }),
     new WorkerPlugin({
       // use "self" as the global object when receiving hot updates.
