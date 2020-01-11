@@ -11,7 +11,7 @@
 // TODO - add easy method call (80%, direct calls?)
 // TODO - add lazy loading (100%)
 // TODO - add timeout for request (80%, long calls failed?)
-// TODO - add transferable objects (80%,through proxies?)
+// TODO - add transferable objects (80%, through proxies?)
 // TODO - add Unit auto class trigger (100%)
 // TODO - add units dependancy (0%)
 // TODO - split by files (0%)

@@ -1,11 +1,7 @@
  <div align="center">
   <h1>Units Manager</h1>
   <p><i>A javascript library to split your code with web workers</i></p>
- 
- <!--
- <a href="https://github.com/greorex/uman/actions"><img alt="Build Status" src="https://github.com/greorex/uman/workflows/Build/badge.svg?color=green" /></a> <a href="https://github.com/greorex/uman/actions"> <img alt="Publish Status" src="https://github.com/greorex/uman/workflows/Publish/badge.svg?color=green" /></a> <img src="https://api.dependabot.com/badges/status?host=github&repo=greorex/uman" />
--->
- </div>
+   </div>
 
 ## About
 
@@ -17,7 +13,7 @@ Everything is as simple as if you code in asynchronous way.
 
 - ES6+
 - small size
-- no dependancy
+- no dependency
 - code splitting support
 - units lazy loading on demand
 - easy communications between units
@@ -304,7 +300,7 @@ units.other.emit("event", payload);
 
 ## Contacts
 
-Fill free to contact me if you need help with customization or installation.
+Please feel free to contact me if you have any questions.
 
 ## License
 
