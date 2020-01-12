@@ -1,8 +1,7 @@
 const path = require("path");
 const WorkerPlugin = require("worker-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const { name, version } = require("./package.json");
+const { name, version } = require("./../package.json");
 
 module.exports = {
   mode: "development",
@@ -21,14 +20,17 @@ module.exports = {
       }
     ]
   },
+  resolve: {
+    alias: {
+      uman: path.resolve(__dirname, "../src/index.js")
+    }
+  },
   plugins: [
-    new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       title: `${name}, v${version}, development`
     }),
     new WorkerPlugin({
-      // use "self" as the global object when receiving hot updates.
-      globalObject: "self" // <-- this is the default value
+      globalObject: "self"
     })
   ],
   devtool: "source-map",

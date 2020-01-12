@@ -1,49 +1,37 @@
-import babel from "rollup-plugin-babel";
+import del from "rollup-plugin-delete";
+import { terser } from "rollup-plugin-terser";
 import pkg from "./package.json";
 
-const banner = `/*!
- * @license
+const copyright = `(c) 2019-${new Date().getFullYear()} ${pkg.author.replace(
+  / *\<[^)]*\> */g,
+  " "
+)}`;
+
+const banner = `/* @preserve
  * ${pkg.name}, v${pkg.version}
  * ${pkg.description}
- * ${pkg.repository.url}
- *
- * ${`(c) 2019-${new Date().getFullYear()} ${pkg.author.replace(
-   / *\<[^)]*\> */g,
-   " "
- )}`}
- * Released under the ${pkg.license}
+ * ${copyright}
+ * Released under the ${pkg.license} license
  */`;
 
-export default {
-  input: "./src/index.js",
+const config = {
+  input: pkg.source,
   output: [
     {
       banner,
       file: pkg.main,
-      format: "cjs"
+      format: "umd",
+      name: pkg.name,
+      sourcemap: true
     },
     {
       banner,
       file: pkg.module,
-      format: "es",
-      sourceMap: "inline"
+      format: "esm",
+      sourcemap: true
     }
   ],
-  plugins: [
-    babel({
-      exclude: "node_modules/**", // only transpile our source code
-      babelrc: false,
-      comments: false,
-      presets: [
-        [
-          "@babel/preset-env",
-          {
-            modules: false,
-            targets: { node: "10" }
-          }
-        ]
-      ],
-      plugins: [["@babel/plugin-proposal-class-properties", { loose: true }]]
-    })
-  ]
+  plugins: [del({ targets: "dist/*" }), terser()]
 };
+
+export default config;

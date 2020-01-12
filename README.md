@@ -81,28 +81,28 @@ import { Unit } from "uman";
 
 export default Unit.instance(
   class extends Unit {
-    // run some tests, asking other units to do calculation.
     async run(arr) {
       const units = this.units;
-      const { one, log } = units;
+      const { one } = units;
 
-      // fire event "log" to Unit Log
-      log.emit("log", "Starting tests with " + arr);
+      units.emit("log", "Starting with " + arr);
 
       // call method "sum" of Unit One
       const sum = await one.sum(arr);
-      log.emit("log", "Sum of " + arr + " = " + sum);
+      // and fire event "log" to all units
+      units.emit("log", "Sum of " + arr + " = " + sum);
 
+      // call method "cubes" of Unit Two
       const cubes = await units.two.cubes(arr);
-      log.emit("log", "Cubes of " + arr + " = " + cubes);
+      units.emit("log", "Cubes of " + arr + " = " + cubes);
 
       const sumofcubes1 = await one.sumofcubes(arr);
-      log.emit("log", "Sum of cubes of " + arr + " = " + sumofcubes1);
+      units.emit("log", "Sum of cubes of " + arr + " = " + sumofcubes1);
 
       const sumofcubes2 = await one.sum(cubes);
-      log.emit("log", "Sum of " + cubes + " = " + sumofcubes2);
+      units.emit("log", "Sum of " + cubes + " = " + sumofcubes2);
 
-      log.emit("log", "Done: " + sumofcubes1 + " = " + sumofcubes2);
+      units.emit("log", "Done: " + sumofcubes1 + " = " + sumofcubes2);
 
       return sumofcubes1 === sumofcubes2 ? "passed" : "failed";
     }
@@ -119,18 +119,9 @@ import { Unit } from "uman";
 
 export default Unit.instance(
   class extends Unit {
-    constructor() {
-      super();
-
-      // to catch "log" event from tests
-      this.units.tests.onlog = message => {
-        // and render it
-        this.render(message);
-      };
-    }
-
-    render(message) {
-      console.log(message);
+    // to catch "log" events from all units
+    onlog(event) {
+      console.log(event.sender + ": " + event.payload);
     }
   }
 );
@@ -145,35 +136,47 @@ import { UnitsManager, Unit } from "uman";
 
 // main class to run app
 class MainUnit extends Unit {
-  async run() {
-    const result = await this.units.tests.run([2, 3, 4]);
-    this.units.log.render("Test " + result);
-    uman.deleteUnit("tests");
+  constructor() {
+    super();
+
+    this.units.tests.onlog = message => this.render(message);
+  }
+
+  async run(arr) {
+    this.render("Units Manager Test");
+    const result = await this.units.tests.run(arr);
+    this.render("Test " + result);
+  }
+
+  render(message) {
+    const p = document.createElement("p");
+    p.innerHTML = message;
+    document.body.appendChild(p);
   }
 }
 
 // add main unit
 const uman = new UnitsManager({
-  // direct instance
-  main: new MainUnit()
+  // create on demand
+  main: () => new MainUnit()
 });
 
-import TwoUnit from "./units/two";
+import LogUnit from "./units/log";
 
 // add units
 uman.addUnits({
   // worker thread
   one: () => new Worker("./units/one.js", { type: "module" }),
-  // create on demand
-  two: () => new TwoUnit(),
+  // lazy import
+  two: () => import("./units/two"),
   // other worker thread
   tests: () => new Worker("./units/tests.js", { type: "module" }),
-  // lazy import
-  log: () => import("./units/log")
+  // direct instance
+  log: new LogUnit()
 });
 
 // run
-uman.units.main.run();
+uman.units.main.run([2, 3, 4]);
 ```
 
 ### Bundle it and test
@@ -186,7 +189,6 @@ For webpack, the configuration could be the following:
 const path = require("path");
 const WorkerPlugin = require("worker-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 
 module.exports = {
   mode: "development",
@@ -205,12 +207,10 @@ module.exports = {
         // use proper babel.config for ES6+
         // with
         // @babel/preset-env
-        // @babel/plugin-proposal-class-properties
       }
     ]
   },
   plugins: [
-    new CleanWebpackPlugin(),
     new HtmlWebpackPlugin({
       title: `Uman tests`
     }),
@@ -306,4 +306,4 @@ Please feel free to contact me if you have any questions.
 
 Copyright © 2019-2020 Grigory Schurovski
 
-Licensed under the [Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0) license.
+Licensed under the [Apache-2.0](https://github.com/greorex/uman/blob/dev/LICENSE) license.

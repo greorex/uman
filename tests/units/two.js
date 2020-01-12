@@ -1,4 +1,4 @@
-import { Unit } from "./../uman";
+import { Unit } from "uman";
 
 export default Unit.instance(
   class extends Unit {

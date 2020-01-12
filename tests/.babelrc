@@ -1,0 +1,13 @@
+{
+  "presets": [
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": "10",
+          "browsers": "last 2 chrome version, last 2 firefox version"
+        }
+      }
+    ]
+  ]
+}

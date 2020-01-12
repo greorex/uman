@@ -25,20 +25,20 @@
 /**
  * message types enum
  */
-export class MessageType {
-  static EVENT = "event";
-  static REQUEST = "request";
-  static RESPONSE = "response";
-  static RECEIPT = "receipt";
-}
+export const MessageType = {
+  EVENT: "event",
+  REQUEST: "request",
+  RESPONSE: "response",
+  RECEIPT: "receipt"
+};
 
 /**
  * target types enum
  */
-export class TargetType {
-  static ALL = "all";
-  static THIS = 0;
-}
+export const TargetType = {
+  ALL: "all",
+  THIS: 0
+};
 
 /**
  * unit base call engine

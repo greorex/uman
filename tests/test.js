@@ -1,10 +1,13 @@
-import { UnitsManager, Unit } from "./uman";
+import { UnitsManager, Unit } from "uman";
 import One from "./units/one";
 import Two from "./units/two";
 import Tests from "./units/tests";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
+const innerLog = false;
+
+const logLoader = innerLog ? new Log() : () => new Log();
 
 if (!globalThis.Worker) globalThis.Worker = class Worker {};
 
@@ -45,7 +48,7 @@ describe("runs all test", () => {
       one: () => new One(),
       two: () => new Two(),
       tests: () => new Tests(),
-      log: () => new Log()
+      log: logLoader
     });
     expect(Object.keys(uman.units).length).toEqual(5);
   });
