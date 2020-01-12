@@ -306,4 +306,4 @@ Please feel free to contact me if you have any questions.
 
 Copyright © 2019-2020 Grigory Schurovski
 
-Licensed under the [Apache-2.0](https://github.com/greorex/uman/blob/dev/LICENSE) license.
+Licensed under the [Apache-2.0](https://github.com/greorex/uman/blob/master/LICENSE) license.
