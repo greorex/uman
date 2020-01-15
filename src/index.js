@@ -108,7 +108,7 @@ export class UnitBase {
   _requestFunction(target, method) {
     // any number of argiments
     // will be called as method(...args);
-    return async (...args) =>
+    return (...args) =>
       this._redispatch({
         type: MessageType.REQUEST,
         target,
@@ -117,45 +117,48 @@ export class UnitBase {
       });
   }
 
-  async _oncall(data) {
-    const { type, method, payload, sender } = data;
-
-    switch (type) {
-      case MessageType.REQUEST:
-        // method has to be declared
-        // may be async as well
-        return this[method](...payload);
-
-      case MessageType.EVENT:
-        // do if exists
-        // trick to have short 'on...'
-        if (sender) {
-          // unit.units.sender.onmethod(payload)
-          // priority #1
-          const p = this._unitsProxy[sender];
-          if (p) {
-            const m = `on${method}`;
-            if (m in p && p[m](payload)) return;
-          }
-
-          // onsendermethod(payload)
-          // priority #2
-          const m = `on${sender}${method}`;
-          if (m in this && this[m](payload)) return;
-        }
-
-        // raw call 'onmethod(eventobject)'
-        // priority #3
+  _onevent(data) {
+    const { method, payload, sender } = data;
+    // do if exists
+    // trick to have short 'on...'
+    if (sender) {
+      // unit.units.sender.onmethod(payload)
+      // priority #1
+      const p = this._unitsProxy[sender];
+      if (p) {
         const m = `on${method}`;
-        if (m in this && this[m](data)) return;
+        if (m in p && p[m](payload)) return;
+      }
+
+      // onsendermethod(payload)
+      // priority #2
+      const m = `on${sender}${method}`;
+      if (m in this && this[m](payload)) return;
+    }
+
+    // raw call 'onmethod(eventobject)'
+    // priority #3
+    const m = `on${method}`;
+    if (m in this && this[m](data)) return;
+  }
+
+  _oncall(data) {
+    const { method, payload } = data;
+    // method has to be declared
+    // may be async as well
+    return this[method](...payload);
+  }
+
+  _dispatch(data) {
+    switch (data.type) {
+      case MessageType.EVENT:
+        return this._onevent(data);
+      case MessageType.REQUEST:
+        return this._oncall(data);
     }
   }
 
-  async _dispatch(data) {
-    return this._oncall(data);
-  }
-
-  async _redispatch(data) {
+  _redispatch(data) {
     return this._dispatch(data);
   }
 }
@@ -167,7 +170,7 @@ class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
-    this._c = {}; // calls
+    this._c = new Map(); // calls
     this._n = 0; // next call index
 
     this.options.timeout = 5000;
@@ -190,7 +193,7 @@ class UnitWorkerEngine extends UnitBase {
     if (data instanceof Object) {
       switch (data.type) {
         case MessageType.EVENT:
-          return this._oncall(data);
+          return this._onevent(data);
         case MessageType.REQUEST:
           return this._onrequest(data);
         case MessageType.RESPONSE:
@@ -205,31 +208,30 @@ class UnitWorkerEngine extends UnitBase {
 
   _clearTimeout(data) {
     // restore call
-    const c = this._c[data.cid];
+    const c = this._c.get(data.cid);
     if (!c) return;
     const { timeout } = c;
     // drop the timer
     timeout && clearTimeout(timeout);
   }
 
-  async _dispatch(data) {
+  _dispatch(data) {
     switch (data.type) {
       case MessageType.EVENT:
         // just post
         return this.postMessage(data);
       case MessageType.REQUEST:
         // post with promise
-        const _this = this;
         return new Promise((resolve, reject) => {
           // store call
-          _this._c[(data.cid = ++_this._n)] = {
+          this._c.set((data.cid = ++this._n), {
             resolve,
             reject,
             // just in case no receiver
             timeout: !this.options.timeout
               ? 0
               : setTimeout(() => {
-                  _this._onresponse({
+                  this._onresponse({
                     cid: data.cid,
                     error:
                       "Timeout on request " +
@@ -237,9 +239,9 @@ class UnitWorkerEngine extends UnitBase {
                       " from " +
                       data.sender
                   });
-                }, _this.options.timeout)
-          };
-          _this.postMessage(data);
+                }, this.options.timeout)
+          });
+          this.postMessage(data);
         });
     }
   }
@@ -268,11 +270,11 @@ class UnitWorkerEngine extends UnitBase {
   _onresponse(data) {
     const { cid, result, error } = data;
     // restore call
-    const c = this._c[cid];
+    const c = this._c.get(cid);
     if (!c) return;
     // remove call
     this._clearTimeout(data);
-    delete this._c[cid];
+    this._c.delete(cid);
     // promise's time
     error ? c.reject(new Error(error)) : c.resolve(result);
   }
@@ -288,7 +290,12 @@ export class UnitWorker extends UnitWorkerEngine {
     this.terminate = () => worker.terminate();
   }
 
-  async _oncall(data) {
+  _onevent(data) {
+    if (data.target) return this._redispatch(data);
+    return super._onevent(data);
+  }
+
+  _oncall(data) {
     if (data.target) return this._redispatch(data);
     return super._oncall(data);
   }
@@ -381,7 +388,7 @@ export class UnitsManager {
     // attach
     unit.name = name;
     // override to redispatch
-    unit._redispatch = async data => {
+    unit._redispatch = data => {
       data.sender = unit.name;
       // redispatch
       return this._redispatch(data);
@@ -406,7 +413,7 @@ export class UnitsManager {
     }
   }
 
-  async _redispatch(data) {
+  _redispatch(data) {
     const { target, sender } = data;
 
     switch (target) {
