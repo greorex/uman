@@ -1,12 +1,6 @@
 import { UnitsManager, Unit } from "uman";
 
-const pureTest = arr => {
-  const sum = arr.reduce((r, i) => (r += i), 0);
-  const cubes = arr.map(i => i ** 3);
-  const sumofcubes1 = arr.map(i => i ** 3).reduce((r, i) => (r += i), 0);
-  const sumofcubes2 = cubes.reduce((r, i) => (r += i), 0);
-  return sumofcubes1 === sumofcubes2 ? "passed" : "failed";
-};
+import { pureTest } from "./pure";
 
 // main class to run app
 class MainUnit extends Unit {
@@ -25,8 +19,8 @@ class MainUnit extends Unit {
       const t1 = performance.now();
       pureTest(arr);
       const t2 = performance.now();
-      this.render("Time: " + (t1 - t0).toFixed(4) + " ms");
-      this.render("Pure: " + (t2 - t1).toFixed(4) + " ms");
+      this.render("Time: " + (t1 - t0).toFixed(3) + " ms");
+      this.render("Pure: " + (t2 - t1).toFixed(3) + " ms");
     }
     this.render("Test " + result);
   }
@@ -59,4 +53,4 @@ uman.addUnits({
 });
 
 // run
-uman.units.main.test([2, 3, 4]);
+uman.units.main.test([2, 3, 4, 5]);

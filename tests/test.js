@@ -1,7 +1,4 @@
 import { UnitsManager, Unit } from "uman";
-import One from "./units/one";
-import Two from "./units/two";
-import Tests from "./units/tests";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
@@ -18,7 +15,7 @@ class MainUnit extends Unit {
   }
 }
 
-describe("runs all test", () => {
+describe("runs all tests", () => {
   let uman;
 
   beforeAll(() => {
@@ -35,7 +32,7 @@ describe("runs all test", () => {
     expect(uman).toBeInstanceOf(UnitsManager);
   });
 
-  it("adds main unit", () => {
+  test("main unit added", () => {
     uman.addUnits({
       main: new MainUnit()
     });
@@ -43,17 +40,22 @@ describe("runs all test", () => {
     expect(uman.units.main).toBeInstanceOf(MainUnit);
   });
 
-  it("adds all other units", () => {
+  test("all other units added", () => {
     uman.addUnits({
-      one: () => new One(),
-      two: () => new Two(),
-      tests: () => new Tests(),
+      one: () => import("./units/one"),
+      two: () => import("./units/two"),
+      tests: () => import("./units/tests"),
       log: logLoader
     });
     expect(Object.keys(uman.units).length).toEqual(5);
   });
 
-  it("runs all inner tests", async () => {
+  test("method accessed with direct call", async () => {
+    const result = await uman.units.tests.pureTest(testArray);
+    expect(result).toEqual("passed");
+  });
+
+  test("inner tests passed", async () => {
     const result = await uman.units.main.run(testArray);
     expect(result).toEqual("passed");
   });

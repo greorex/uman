@@ -13,7 +13,7 @@
 // TODO - add timeout for request (80%, long calls failed?)
 // TODO - add transferable objects (80%, through proxies?)
 // TODO - add Unit auto class trigger (100%)
-// TODO - add units dependancy (0%)
+// TODO - add units dependency (0%)
 // TODO - split by files (0%)
 // TODO - add args and return proxies (0%)
 // TODO - add service worker support (0%)
@@ -199,20 +199,11 @@ class UnitWorkerEngine extends UnitBase {
         case MessageType.RESPONSE:
           return this._onresponse(data);
         case MessageType.RECEIPT:
-          return this._clearTimeout(data);
+          return this._onreceipt(data);
       }
     }
     // call standard listener
     this.onmessage(event);
-  }
-
-  _clearTimeout(data) {
-    // restore call
-    const c = this._c.get(data.cid);
-    if (!c) return;
-    const { timeout } = c;
-    // drop the timer
-    timeout && clearTimeout(timeout);
   }
 
   _dispatch(data) {
@@ -221,26 +212,25 @@ class UnitWorkerEngine extends UnitBase {
         // just post
         return this.postMessage(data);
       case MessageType.REQUEST:
-        // post with promise
+        // post and wait
         return new Promise((resolve, reject) => {
-          // store call
-          this._c.set((data.cid = ++this._n), {
+          const c = {
             resolve,
-            reject,
-            // just in case no receiver
-            timeout: !this.options.timeout
-              ? 0
-              : setTimeout(() => {
-                  this._onresponse({
-                    cid: data.cid,
-                    error:
-                      "Timeout on request " +
-                      data.method +
-                      " from " +
-                      data.sender
-                  });
-                }, this.options.timeout)
-          });
+            reject
+          };
+          // next call id
+          data.cid = ++this._n;
+          // just in case no receiver
+          if (this.options.timeout)
+            c.timeout = setTimeout(() => {
+              this._onresponse({
+                cid: data.cid,
+                error: "Timeout on request " + data.method
+              });
+            }, this.options.timeout);
+          // store call
+          this._c.set(data.cid, c);
+          // and post
           this.postMessage(data);
         });
     }
@@ -273,10 +263,16 @@ class UnitWorkerEngine extends UnitBase {
     const c = this._c.get(cid);
     if (!c) return;
     // remove call
-    this._clearTimeout(data);
+    c.timeout && clearTimeout(c.timeout);
     this._c.delete(cid);
     // promise's time
-    error ? c.reject(new Error(error)) : c.resolve(result);
+    !error ? c.resolve(result) : c.reject(new Error(error));
+  }
+
+  _onreceipt(data) {
+    // drop timeout
+    const c = this._c.get(data.cid);
+    c && c.timeout && clearTimeout(c.timeout);
   }
 }
 

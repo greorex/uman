@@ -1,5 +1,7 @@
 import { Unit } from "uman";
 
+import { pureTest } from "./../pure";
+
 export default Unit.instance(
   class extends Unit {
     async run(arr) {
@@ -28,14 +30,8 @@ export default Unit.instance(
       return sumofcubes1 === sumofcubes2 ? "passed" : "failed";
     }
 
-    async pureTest(arr) {
-      const units = this.units;
-      const { one } = units;
-      const sum = await one.sum(arr);
-      const cubes = await units.two.cubes(arr);
-      const sumofcubes1 = await one.sumofcubes(arr);
-      const sumofcubes2 = await one.sum(cubes);
-      return sumofcubes1 === sumofcubes2 ? "passed" : "failed";
+    pureTest(arr) {
+      return pureTest(arr);
     }
   }
 );
