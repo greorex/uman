@@ -1,7 +1,6 @@
- <div align="center">
-  <h1>Units Manager</h1>
-  <p><i>A javascript library to split your code with web workers</i></p>
-   </div>
+# Units Manager
+
+_A javascript library to split your code with web workers_
 
 ## About
 
@@ -202,7 +201,6 @@ module.exports = {
     rules: [
       {
         test: /\.m?js$/,
-        exclude: /(node_modules)/,
         loader: "babel-loader"
         // use proper babel.config for ES6+
         // with

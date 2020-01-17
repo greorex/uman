@@ -1,6 +1,6 @@
 import { Unit } from "uman";
 
-import { pureTest } from "./../pure";
+import { pureTest, pureSum } from "./../pure";
 
 export default Unit.instance(
   class extends Unit {
@@ -32,6 +32,15 @@ export default Unit.instance(
 
     pureTest(arr) {
       return pureTest(arr);
+    }
+
+    onnoManagerTest(event) {
+      this.emit(event.method, event.payload + " returned");
+    }
+
+    async noManagerTest(arr) {
+      const result = await this.sum(arr);
+      return pureSum(arr) === result ? "passed" : "failed";
     }
   }
 );

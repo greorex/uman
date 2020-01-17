@@ -1,6 +1,6 @@
 {
   "name": "uman",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",
@@ -17,7 +17,8 @@
   },
   "files": [
     "dist/",
-    "LICESNSE"
+    "LICESNSE",
+    "README.md"
   ],
   "keywords": [
     "uman",

@@ -8,11 +8,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// TODO - add easy method call (80%, direct calls?)
+// TODO - add easy method call (100%)
 // TODO - add lazy loading (100%)
+// TODO - add Unit auto class trigger (100%)
 // TODO - add timeout for request (80%, long calls failed?)
 // TODO - add transferable objects (80%, through proxies?)
-// TODO - add Unit auto class trigger (100%)
 // TODO - add units dependency (0%)
 // TODO - split by files (0%)
 // TODO - add args and return proxies (0%)
@@ -51,9 +51,28 @@ export class UnitBase {
     // to set 'on...' in constructor
     this.units = this._proxyUnits();
     this._unitsProxy = {};
+
+    return this._proxyThis();
   }
 
   terminate() {}
+
+  _proxyThis() {
+    // proxy this
+    const base = {
+      emit: this._emitFunction(TargetType.THIS)
+    };
+    return new Proxy(this, {
+      get: (t, prop) => {
+        // own asked
+        if (prop in t) return t[prop];
+        // base asked
+        if (prop in base) return base[prop];
+        // method asked
+        return this._requestFunction(TargetType.THIS, prop);
+      }
+    });
+  }
 
   _proxyTarget(target) {
     // cache
@@ -385,8 +404,9 @@ export class UnitsManager {
     unit.name = name;
     // override to redispatch
     unit._redispatch = data => {
-      data.sender = unit.name;
+      if (!data.target) return unit._dispatch(data);
       // redispatch
+      data.sender = unit.name;
       return this._redispatch(data);
     };
 

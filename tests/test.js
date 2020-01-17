@@ -1,4 +1,4 @@
-import { UnitsManager, Unit } from "uman";
+import { UnitsManager, Unit, UnitBase } from "uman";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
@@ -20,12 +20,6 @@ describe("runs all tests", () => {
 
   beforeAll(() => {
     uman = new UnitsManager();
-  });
-
-  afterAll(() => {
-    if (uman) {
-      uman.deleteAll();
-    }
   });
 
   test("units manager created", () => {
@@ -51,6 +45,7 @@ describe("runs all tests", () => {
   });
 
   test("method accessed with direct call", async () => {
+    expect(uman.units.tests).toBeInstanceOf(UnitBase);
     const result = await uman.units.tests.pureTest(testArray);
     expect(result).toEqual("passed");
   });
@@ -58,5 +53,15 @@ describe("runs all tests", () => {
   test("inner tests passed", async () => {
     const result = await uman.units.main.run(testArray);
     expect(result).toEqual("passed");
+  });
+
+  test("unit 'tests' deleted", () => {
+    uman.deleteUnit("tests");
+    expect(Object.keys(uman.units).length).toEqual(4);
+  });
+
+  test("all other units deleted", () => {
+    uman.deleteAll("tests");
+    expect(Object.keys(uman.units).length).toEqual(0);
   });
 });
