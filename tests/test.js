@@ -6,7 +6,7 @@ const innerLog = false;
 
 const logLoader = innerLog ? new Log() : () => new Log();
 
-if (!globalThis.Worker) globalThis.Worker = class Worker {};
+if (!global.Worker) global.Worker = class Worker {};
 
 // main class to run app
 class MainUnit extends Unit {
