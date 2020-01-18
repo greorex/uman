@@ -30,7 +30,7 @@ npm install uman --save
 
 Let's create two units for calculation, add them to the Uman, and run test unit with logging in the log unit.
 
-Note, the syntax of units is equal and doesn't depend on where the units will be, in the main thread or in the workers.
+> Note, the syntax of units is equal and doesn't depend on where the units will be, in the main thread or in the workers.
 
 ### Unit One
 
@@ -183,6 +183,8 @@ uman.units.main.run([2, 3, 4]);
 ### Bundle it and test
 
 Use webpack or other bundler with code-splitting support.
+
+> Note, the library is not transpiled, so do not ignore it while transpiling your bundles and chunks.
 
 For webpack, the configuration could be the following:
 
