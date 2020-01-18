@@ -2,6 +2,8 @@
 
 _A javascript library to split your code with web workers_
 
+[![Build Status](https://github.com/greorex/uman/workflows/CI/badge.svg)](https://github.com/greorex/uman/actions)
+
 ## About
 
 Being a small but robust javascript library, the Uman lets easily split your code by separarted modules - units. Even more, you may define units as web workers to have pure multithreading way of programming. With the Uman you don't have to think about communication between workers.
