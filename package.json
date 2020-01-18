@@ -34,7 +34,7 @@
     "dev": "webpack-dev-server --config ./tests/webpack.config.js --open",
     "build": "rollup -c",
     "test": "jest",
-    "publish": "npm publish || true"
+    "release": "npm publish || true"
   },
   "dependencies": {},
   "devDependencies": {

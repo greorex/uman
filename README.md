@@ -2,7 +2,7 @@
 
 _A javascript library to split your code with web workers_
 
-[![Build Status](https://github.com/greorex/uman/workflows/CI/badge.svg)](https://github.com/greorex/uman/actions)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/greorex/uman/Tests) ![David](https://img.shields.io/david/greorex/uman) ![npm bundle size](https://img.shields.io/bundlephobia/min/uman) [![npm](https://img.shields.io/npm/v/uman)](https://www.npmjs.com/package/uman)
 
 ## About
 
