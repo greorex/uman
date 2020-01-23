@@ -8,7 +8,11 @@ _A javascript library to split your code with web workers_
 
 Being a small but robust javascript library, the Uman lets easily split your code by separarted modules - units. Even more, you may define units as web workers to have pure multithreading way of programming. With the Uman you don't have to think about communication between workers.
 
-Everything is as simple as if you code in asynchronous way.
+Everything is as simple as if you code in asynchronous way:
+
+- [How to use](#how_to_use)
+- [Examples](#examples)
+- [API reference](#api_reference)
 
 ## Features
 
@@ -25,6 +29,8 @@ Everything is as simple as if you code in asynchronous way.
 ```
 npm install uman --save
 ```
+
+<a name="how_to_use"></a>
 
 ## How to use
 
@@ -140,6 +146,7 @@ class MainUnit extends Unit {
   constructor() {
     super();
 
+    // to catch event "log" from unit "tests"
     this.units.tests.onlog = message => this.render(message);
   }
 
@@ -166,11 +173,11 @@ import LogUnit from "./units/log";
 
 // add units
 uman.addUnits({
-  // worker thread
+  // web worker thread
   one: () => new Worker("./units/one.js", { type: "module" }),
   // lazy import
   two: () => import("./units/two"),
-  // other worker thread
+  // other web worker thread
   tests: () => new Worker("./units/tests.js", { type: "module" }),
   // direct instance
   log: new LogUnit()
@@ -205,10 +212,12 @@ module.exports = {
     rules: [
       {
         test: /\.m?js$/,
-        loader: "babel-loader"
-        // use proper babel.config for ES6+
-        // with
-        // @babel/preset-env
+        loader: "babel-loader",
+        // do not exclude "uman"
+        exclude: /node_modules\/(?!(uman)\/).*/
+        // for browsers to support
+        // use proper babel.config
+        // with @babel/preset-env
       }
     ]
   },
@@ -231,21 +240,38 @@ module.exports = {
 
 Thats all.
 
+<a name="examples"></a>
+
+## Examples
+
+There are some [working examples](https://github.com/greorex/uman/tree/master/tests) to test the Uman.
+
+Clone repository and:
+
+```
+npm install
+npm run dev
+```
+
+Then open browser with [http://loclahost:8080]().
+
+<a name="api_reference"></a>
+
 ## API Reference
 
 ### UnitsManager
 
-Class to create manager
+Class to create manager.
 
 ```javascript
 UnitsManager(units: Object like {
-  // 1) created instance
+  // 1) created unit
   name: new Unit(),
-  // 2) will be created on demand
+  // 2) unit will be created on demand
   name: () => new Unit(),
-  // 3) will be run on demand
+  // 3) unit will be run on demand as web worker
   name: () => new Worker(url, options);
-  // 4) will be imported on demand
+  // 4) unit will be imported on demand
   name: () => import('pathto/unit.js');
 })
 
@@ -258,33 +284,59 @@ deleteAllUnits()
 
 ### Unit
 
-Class to create unit
+Class to create unit.
 
 ```javascript
 Unit();
 ```
 
+Please follow the syntax to have the unit as an universal module:
+
+```javascript
+export default Unit.instance(
+  class extends Unit {
+    // your ES6+ code
+  }
+);
+```
+
+The class will be atomatically instantiated if it's used as a script part of web worker unit.
+
+But it's possible to use it as ES6+ module, with _import_ and _new_.
+
+### UnitWorker
+
+Class to create worker part of web worker unit.
+
+```typescript
+UnitWorker(worker: Worker);
+```
+
+It's created automatically in case you initialize the unit with _Worker_.
+
+You may use web worker's methods, like _postMessage_ to exchange raw data with the worker thread, as well as _onmessage_ to catch events.
+
 ### Property "units"
 
-Each class has special property
+Each class has special property:
 
 ```javascript
 units: Object;
 ```
 
-1. to call "other" unit
+1. to call "other" unit:
 
 ```javascript
 async units.other(...args);
 ```
 
-2. to catch event from "other" unit
+2. to catch event from "other" unit:
 
 ```javascript
 units.other.onevent = payload => {};
 ```
 
-3. to emit events
+3. to emit events:
 
 ```javascript
 // to all units
