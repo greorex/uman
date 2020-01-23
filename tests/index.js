@@ -6,8 +6,6 @@ import { pureTest, pureSum } from "./pure";
 const testArray = [2, 3, 4, 5];
 const innerLog = false;
 
-const logLoader = innerLog ? new LogUnit() : () => new LogUnit();
-
 const render = message => {
   const p = document.createElement("p");
   p.innerHTML = message;
@@ -47,20 +45,20 @@ class MainUnit extends Unit {
 
 // add main unit
 const uman = new UnitsManager({
-  // direct instance
+  // instance
   main: new MainUnit()
 });
 
 // add units
 uman.addUnits({
   // worker thread
-  one: () => new Worker("./units/one.js", { type: "module" }),
+  one: new Worker("./units/one.js", { type: "module" }),
   // lazy import
-  two: () => import("./units/two"),
-  // other worker thread
+  two: import("./units/two"),
+  // other worker thread on demand
   tests: () => new Worker("./units/tests.js", { type: "module" }),
-  // create on demand
-  log: logLoader
+  // create on demand?
+  log: innerLog ? new LogUnit() : () => new LogUnit()
 });
 
 // run all

@@ -48,10 +48,11 @@ export class UnitBase {
     this.options = {};
     // manager engine
     this.name = "";
+    this._redispatch = data => this._dispatch(data);
     // to set 'on...' in constructor
     this.units = this._proxyUnits();
     this._unitsProxy = {};
-
+    // proxy engine
     return this._proxyThis();
   }
 
@@ -66,7 +67,6 @@ export class UnitBase {
   }
 
   _proxyThis() {
-    // proxy engine
     return new Proxy(this, {
       get: (t, prop, receiver) => {
         // own asked
@@ -182,10 +182,6 @@ export class UnitBase {
         return this._oncall(data);
     }
   }
-
-  _redispatch(data) {
-    return this._dispatch(data);
-  }
 }
 
 /**
@@ -194,10 +190,10 @@ export class UnitBase {
 class UnitCallStack extends Map {
   constructor() {
     super();
-    this.n = 0; // next call index
+    this._n = 0; // next call index
   }
   next() {
-    return ++this.n;
+    return ++this._n;
   }
 }
 
@@ -213,9 +209,7 @@ class UnitWorkerEngine extends UnitBase {
 
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
-    this.postMessage = (...args) => {
-      engine.postMessage(...args);
-    };
+    this.postMessage = (...args) => engine.postMessage(...args);
     engine.onmessage = event => {
       const { data } = event;
       // is this our message?
@@ -232,11 +226,10 @@ class UnitWorkerEngine extends UnitBase {
         }
       }
       // call standard listener
-      this.onmessage(event);
+      // @ts-ignore
+      this.onmessage instanceof Function && this.onmessage(event);
     };
   }
-
-  onmessage(_) {}
 
   _dispatch(data) {
     switch (data.type) {
@@ -246,8 +239,7 @@ class UnitWorkerEngine extends UnitBase {
       case MessageType.REQUEST:
         // post and wait
         return new Promise((resolve, reject) => {
-          const { timeout } = this.options;
-          const { _calls } = this;
+          const { options, _calls } = this;
           const c = {
             resolve,
             reject
@@ -255,13 +247,13 @@ class UnitWorkerEngine extends UnitBase {
           // next call id
           data.cid = _calls.next();
           // just in case no receiver
-          if (timeout)
+          if (options.timeout)
             c.timeout = setTimeout(() => {
               this._onresponse({
                 cid: data.cid,
                 error: "Timeout on request " + data.method
               });
-            }, timeout);
+            }, options.timeout);
           // store call
           _calls.set(data.cid, c);
           // and post
@@ -394,7 +386,12 @@ export class UnitsManager {
         // unit asked?
         if (value instanceof UnitBase) return value;
         // isn't loaded? call loader
-        if (value instanceof Function) return this._attachUnit(prop, value);
+        if (
+          value instanceof Function ||
+          value instanceof Worker ||
+          value instanceof Promise
+        )
+          return this._attachUnit(prop, value);
         // base
         if (prop in base) return base[prop];
         // as is
@@ -450,7 +447,12 @@ export class UnitsManager {
         throw new Error("Wrong unit name: " + name);
       // check unit
       if (unit instanceof UnitBase) this._attachUnit(name, unit);
-      else if (unit instanceof Function) this._units[name] = unit;
+      else if (
+        unit instanceof Function ||
+        unit instanceof Worker ||
+        unit instanceof Promise
+      )
+        this._units[name] = unit;
       else throw new Error("Wrong unit value: " + unit);
     }
   }
