@@ -4,9 +4,7 @@ import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
 const testArray = [2, 3, 4, 5];
-const innerLog = true;
-
-const logLoader = innerLog ? new LogUnit() : () => new LogUnit();
+const innerLog = false;
 
 const render = message => {
   const p = document.createElement("p");
@@ -39,24 +37,28 @@ class MainUnit extends Unit {
     }
     return result;
   }
+
+  ondirectEmitTest(event) {
+    render(event.payload + " received");
+  }
 }
 
 // add main unit
 const uman = new UnitsManager({
-  // create on demand
-  main: () => new MainUnit()
+  // instance
+  main: new MainUnit()
 });
 
 // add units
 uman.addUnits({
   // worker thread
-  one: () => new Worker("./units/one.js", { type: "module" }),
+  one: new Worker("./units/one.js", { type: "module" }),
   // lazy import
-  two: () => import("./units/two"),
-  // other worker thread
+  two: import("./units/two"),
+  // other worker thread on demand
   tests: () => new Worker("./units/tests.js", { type: "module" }),
-  // direct instance
-  log: logLoader
+  // create on demand?
+  log: innerLog ? new LogUnit() : () => new LogUnit()
 });
 
 // run all
@@ -99,7 +101,7 @@ test("Worker Engine", async () => {
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
 
-  unit.emit("noManagerTest", "event sent");
+  unit.emit("noManagerTest", "unit -> event sent");
 
   const result = await unit.noManagerTest(testArray);
 
@@ -109,6 +111,7 @@ test("Worker Engine", async () => {
 });
 
 test("Direct Call", async () => {
+  uman.units.emit("directEmitTest", "uman.units.emit -> event sent");
   return await uman.units.tests.pureTest(testArray);
 });
 
