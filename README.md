@@ -253,7 +253,7 @@ npm install
 npm run dev
 ```
 
-Then open browser with [http://loclahost:8080]().
+Then open browser with http://loclahost:8080.
 
 <a name="api_reference"></a>
 
