@@ -1,7 +1,7 @@
 import { Unit, UnitObject } from "uman";
 
 class OneObject extends UnitObject {
-  async test(testsObject, arr) {
+  async test({ testsObject, arr }) {
     return await testsObject.sum(arr);
   }
 }

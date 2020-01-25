@@ -41,9 +41,34 @@ export const TargetType = {
 };
 
 /**
- * unit object base
+ * unit object base, event emitter
  */
 export class UnitObject {
+  constructor() {
+    this._listeners = {};
+  }
+
+  on(event, f) {
+    if (!(f instanceof Function))
+      throw new Error(`Wrong type of listener for ${event}`);
+    let el = this._listeners[event];
+    if (!el) el = this._listeners[event] = [];
+    el.push(f);
+    return this;
+  }
+
+  off(event, f) {
+    const el = this._listeners[event];
+    if (el) this._listeners[event] = el.filter(i => i !== f);
+    return this;
+  }
+
+  fire(event, ...args) {
+    const el = this._listeners[event];
+    if (el) el.every(f => f(...args));
+    return this;
+  }
+
   _oncall(data) {
     const { method, payload } = data;
     // method has to be declared
@@ -72,10 +97,10 @@ class UnitBase extends UnitObject {
 
   terminate() {}
 
-  emit(method, payload) {
+  emit(event, payload) {
     return this._dispatch({
       type: MessageType.EVENT,
-      method,
+      method: event,
       payload
     });
   }
@@ -242,9 +267,16 @@ class UnitObjectProxy {
 
   static _checkArguments(args, f) {
     // one level only
-    if (Array.isArray(args)) {
-      return args.map(f);
-    } else if (args instanceof Object) {
+    if (Array.isArray(args))
+      return args.map(a =>
+        // and object except
+        !(a instanceof Object) ||
+        a instanceof UnitObjectProxy ||
+        (a.object && a.owner)
+          ? f(a)
+          : UnitObjectProxy._checkArguments(a, f)
+      );
+    else if (args instanceof Object) {
       const r = {};
       for (let key of Object.keys(args)) r[key] = f(args[key]);
       return r;
@@ -259,7 +291,7 @@ class UnitObjectProxy {
 
   static fromArguments(args, unit) {
     return UnitObjectProxy._checkArguments(args, a =>
-      a instanceof Object && a.object
+      a instanceof Object && a.object && a.owner
         ? new UnitObjectProxy(a.object, a.owner, unit)
         : a
     );

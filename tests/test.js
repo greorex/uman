@@ -59,7 +59,7 @@ describe("runs all tests", () => {
   test("args and returns", async () => {
     const testsObject = await uman.units.tests.newObject();
     const oneObject = await uman.units.one.newObject();
-    const result = await oneObject.test(testsObject, testArray);
+    const result = await oneObject.test({ testsObject, arr: testArray });
     expect(result).toEqual(pureSum(testArray));
   });
 

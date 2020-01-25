@@ -45,7 +45,7 @@ class MainUnit extends Unit {
   async testArgsReturns(arr) {
     const testsObject = await this.units.tests.newObject();
     const oneObject = await this.units.one.newObject();
-    const result = await oneObject.test(testsObject, arr);
+    const result = await oneObject.test({ testsObject, arr });
     return result === pureSum(arr) ? "passed" : "failed";
   }
 }
