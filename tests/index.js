@@ -41,6 +41,13 @@ class MainUnit extends Unit {
   ondirectEmitTest(event) {
     render(event.payload + " received");
   }
+
+  async testArgsReturns(arr) {
+    const testsObject = await this.units.tests.newObject();
+    const oneObject = await this.units.one.newObject();
+    const result = await oneObject.test(testsObject, arr);
+    return result === pureSum(arr) ? "passed" : "failed";
+  }
 }
 
 // add main unit
@@ -57,6 +64,7 @@ uman.addUnits({
   two: import("./units/two"),
   // other worker thread on demand
   tests: () => new Worker("./units/tests.js", { type: "module" }),
+  // tests: () => import("./units/tests"),
   // create on demand?
   log: innerLog ? new LogUnit() : () => new LogUnit()
 });
@@ -117,6 +125,10 @@ test("Direct Call", async () => {
 
 test("Units Manager", async () => {
   return await uman.units.main.test(testArray);
+});
+
+test("Args and Returns", async () => {
+  return await uman.units.main.testArgsReturns(testArray);
 });
 
 te.run();

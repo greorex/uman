@@ -1,6 +1,12 @@
-import { Unit } from "uman";
+import { Unit, UnitObject } from "uman";
 
 import { pureTest, pureSum } from "./../pure";
+
+class TestsObject extends UnitObject {
+  sum(arr) {
+    return pureSum(arr);
+  }
+}
 
 export default Unit.instance(
   class extends Unit {
@@ -45,6 +51,10 @@ export default Unit.instance(
     async noManagerTest(arr) {
       const result = await this.sum(arr);
       return pureSum(arr) === result ? "passed" : "failed";
+    }
+
+    newObject() {
+      return new TestsObject();
     }
   }
 );

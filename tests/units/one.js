@@ -1,4 +1,10 @@
-import { Unit } from "uman";
+import { Unit, UnitObject } from "uman";
+
+class OneObject extends UnitObject {
+  async test(testsObject, arr) {
+    return await testsObject.sum(arr);
+  }
+}
 
 export default Unit.instance(
   class extends Unit {
@@ -12,6 +18,10 @@ export default Unit.instance(
     async sumofcubes(arr) {
       const cubes = await this.units.two.cubes(arr);
       return this.sum(cubes);
+    }
+
+    newObject() {
+      return new OneObject();
     }
   }
 );
