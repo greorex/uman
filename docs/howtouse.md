@@ -163,8 +163,11 @@ uman.units.main.run([2, 3, 4]);
 
 Thats all.
 
+- [API reference](api.md)
+- [How to bundle](howtobundle.md)
+
 ## License
 
-Copyright © 2019-2020 Grigory Schurovski
+Copyright © 2019-2020 G. Schurovski
 
 Licensed under the [Apache-2.0](./../LICENSE) license.

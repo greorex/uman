@@ -171,6 +171,6 @@ const result3 = object3.method({ object2, ...args });
 
 ## License
 
-Copyright © 2019-2020 Grigory Schurovski
+Copyright © 2019-2020 G. Schurovski
 
 Licensed under the [Apache-2.0](./../LICENSE) license.
