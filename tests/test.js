@@ -1,4 +1,5 @@
-import { UnitsManager, Unit, UnitBase } from "uman";
+import { UnitsManager, Unit, UnitObject } from "uman";
+import { pureSum } from "./pure";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
@@ -45,7 +46,7 @@ describe("runs all tests", () => {
   });
 
   test("method accessed with direct call", async () => {
-    expect(uman.units.tests).toBeInstanceOf(UnitBase);
+    expect(uman.units.tests).toBeInstanceOf(UnitObject);
     const result = await uman.units.tests.pureTest(testArray);
     expect(result).toEqual("passed");
   });
@@ -53,6 +54,13 @@ describe("runs all tests", () => {
   test("inner tests passed", async () => {
     const result = await uman.units.main.run(testArray);
     expect(result).toEqual("passed");
+  });
+
+  test("args and returns", async () => {
+    const testsObject = await uman.units.tests.newObject();
+    const oneObject = await uman.units.one.newObject();
+    const result = await oneObject.test({ testsObject, arr: testArray });
+    expect(result).toEqual(pureSum(testArray));
   });
 
   test("unit 'tests' deleted", () => {

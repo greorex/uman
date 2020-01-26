@@ -38,8 +38,15 @@ class MainUnit extends Unit {
     return result;
   }
 
-  ondirectEmitTest(event) {
+  ondirectPostTest(event) {
     render(event.payload + " received");
+  }
+
+  async testArgsReturns(arr) {
+    const testsObject = await this.units.tests.newObject();
+    const oneObject = await this.units.one.newObject();
+    const result = await oneObject.test({ testsObject, arr });
+    return result === pureSum(arr) ? "passed" : "failed";
   }
 }
 
@@ -57,6 +64,7 @@ uman.addUnits({
   two: import("./units/two"),
   // other worker thread on demand
   tests: () => new Worker("./units/tests.js", { type: "module" }),
+  // tests: () => import("./units/tests"),
   // create on demand?
   log: innerLog ? new LogUnit() : () => new LogUnit()
 });
@@ -101,7 +109,7 @@ test("Worker Engine", async () => {
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
 
-  unit.emit("noManagerTest", "unit -> event sent");
+  unit.post("noManagerTest", "unit -> event sent");
 
   const result = await unit.noManagerTest(testArray);
 
@@ -111,12 +119,16 @@ test("Worker Engine", async () => {
 });
 
 test("Direct Call", async () => {
-  uman.units.emit("directEmitTest", "uman.units.emit -> event sent");
+  uman.units.post("directPostTest", "uman.units.post -> event sent");
   return await uman.units.tests.pureTest(testArray);
 });
 
 test("Units Manager", async () => {
   return await uman.units.main.test(testArray);
+});
+
+test("Args and Returns", async () => {
+  return await uman.units.main.testArgsReturns(testArray);
 });
 
 te.run();
