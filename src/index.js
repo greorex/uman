@@ -97,17 +97,10 @@ class UnitBase extends UnitObject {
 
   terminate() {}
 
-<<<<<<< HEAD
   post(event, payload) {
     return this._dispatch({
       type: MessageType.EVENT,
       method: event,
-=======
-  emit(method, payload) {
-    return this._dispatch({
-      type: MessageType.EVENT,
-      method,
->>>>>>> master
       payload
     });
   }
@@ -134,11 +127,7 @@ class UnitBase extends UnitObject {
     if (!proxy) {
       // proxy engine
       const base = {
-<<<<<<< HEAD
         post: (method, payload) =>
-=======
-        emit: (method, payload) =>
->>>>>>> master
           this._redispatch({
             type: MessageType.EVENT,
             target,
@@ -174,11 +163,7 @@ class UnitBase extends UnitObject {
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(payload)
     const base = {
-<<<<<<< HEAD
       post: (method, payload) =>
-=======
-      emit: (method, payload) =>
->>>>>>> master
         this._redispatch({
           type: MessageType.EVENT,
           target: TargetType.ALL,
@@ -241,7 +226,6 @@ class UnitCallStack extends Map {
   }
   next() {
     return ++this._n;
-<<<<<<< HEAD
   }
 }
 
@@ -310,8 +294,6 @@ class UnitObjectProxy {
         ? new UnitObjectProxy(a.object, a.owner, unit)
         : a
     );
-=======
->>>>>>> master
   }
 }
 
@@ -323,28 +305,20 @@ class UnitWorkerEngine extends UnitBase {
     super();
 
     this._calls = new UnitCallStack();
-<<<<<<< HEAD
     this._objects = new UnitObjectsCache();
 
-=======
->>>>>>> master
     this.options.timeout = 5000;
 
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
-<<<<<<< HEAD
     engine.onmessage = async event => {
-=======
-    engine.onmessage = event => {
->>>>>>> master
       const { data } = event;
       // is this our message?
       if (data instanceof Object) {
         switch (data.type) {
           case MessageType.EVENT:
             return this._onevent(data);
-<<<<<<< HEAD
 
           case MessageType.REQUEST:
             {
@@ -404,14 +378,6 @@ class UnitWorkerEngine extends UnitBase {
               if (c) c.received = true;
             }
             return;
-=======
-          case MessageType.REQUEST:
-            return this._onrequest(data);
-          case MessageType.RESPONSE:
-            return this._onresponse(data);
-          case MessageType.RECEIPT:
-            return this._onreceipt(data);
->>>>>>> master
         }
       }
       // call standard listener
@@ -429,18 +395,13 @@ class UnitWorkerEngine extends UnitBase {
       case MessageType.REQUEST:
         // post and wait
         return new Promise((resolve, reject) => {
-<<<<<<< HEAD
           const { _calls, name, options } = this;
-=======
-          const { options, _calls } = this;
->>>>>>> master
           const c = {
             received: false
           };
           // next call id
           data.cid = _calls.next();
           // just in case no receiver
-<<<<<<< HEAD
           if (options.timeout) {
             setTimeout(() => {
               if (!c.received)
@@ -463,66 +424,11 @@ class UnitWorkerEngine extends UnitBase {
           _calls.set(data.cid, c);
           // check arguments
           data.payload = UnitObjectProxy.toArguments(data.payload);
-=======
-          if (options.timeout)
-            c.timeout = setTimeout(() => {
-              this._onresponse({
-                cid: data.cid,
-                error: "Timeout on request " + data.method
-              });
-            }, options.timeout);
-          // store call
-          _calls.set(data.cid, c);
->>>>>>> master
           // and post
           this.postMessage(data);
         });
     }
   }
-<<<<<<< HEAD
-=======
-
-  async _onrequest(data) {
-    const response = {
-      cid: data.cid
-    };
-
-    // receipt
-    response.type = MessageType.RECEIPT;
-    this.postMessage(response);
-
-    // call
-    try {
-      response.result = await this._oncall(data);
-    } catch (error) {
-      response.error = error;
-    }
-
-    // response
-    response.type = MessageType.RESPONSE;
-    this.postMessage(response);
-  }
-
-  _onresponse(data) {
-    const { cid, result, error } = data;
-    const { _calls } = this;
-    // restore call
-    const c = _calls.get(cid);
-    if (c) {
-      // remove call
-      c.timeout && clearTimeout(c.timeout);
-      _calls.delete(cid);
-      // promise's time
-      !error ? c.resolve(result) : c.reject(new Error(error));
-    }
-  }
-
-  _onreceipt(data) {
-    // drop timeout
-    const c = this._calls.get(data.cid);
-    c && c.timeout && clearTimeout(c.timeout);
-  }
->>>>>>> master
 }
 
 /**
@@ -593,11 +499,7 @@ export class UnitsManager {
 
   _proxyUnits() {
     const base = {
-<<<<<<< HEAD
       post: (method, payload) =>
-=======
-      emit: (method, payload) =>
->>>>>>> master
         this._redispatch({
           type: MessageType.EVENT,
           target: TargetType.ALL,
@@ -677,11 +579,7 @@ export class UnitsManager {
         unit instanceof Promise
       )
         this._units[name] = unit;
-<<<<<<< HEAD
       else throw new Error(`Wrong unit value: ${unit}`);
-=======
-      else throw new Error("Wrong unit value: " + unit);
->>>>>>> master
     }
   }
 

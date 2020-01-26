@@ -38,7 +38,6 @@ class MainUnit extends Unit {
     return result;
   }
 
-<<<<<<< HEAD
   ondirectPostTest(event) {
     render(event.payload + " received");
   }
@@ -49,11 +48,6 @@ class MainUnit extends Unit {
     const result = await oneObject.test({ testsObject, arr });
     return result === pureSum(arr) ? "passed" : "failed";
   }
-=======
-  ondirectEmitTest(event) {
-    render(event.payload + " received");
-  }
->>>>>>> master
 }
 
 // add main unit
@@ -70,10 +64,7 @@ uman.addUnits({
   two: import("./units/two"),
   // other worker thread on demand
   tests: () => new Worker("./units/tests.js", { type: "module" }),
-<<<<<<< HEAD
   // tests: () => import("./units/tests"),
-=======
->>>>>>> master
   // create on demand?
   log: innerLog ? new LogUnit() : () => new LogUnit()
 });
@@ -118,11 +109,7 @@ test("Worker Engine", async () => {
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
 
-<<<<<<< HEAD
   unit.post("noManagerTest", "unit -> event sent");
-=======
-  unit.emit("noManagerTest", "unit -> event sent");
->>>>>>> master
 
   const result = await unit.noManagerTest(testArray);
 
@@ -132,11 +119,7 @@ test("Worker Engine", async () => {
 });
 
 test("Direct Call", async () => {
-<<<<<<< HEAD
   uman.units.post("directPostTest", "uman.units.post -> event sent");
-=======
-  uman.units.emit("directEmitTest", "uman.units.emit -> event sent");
->>>>>>> master
   return await uman.units.tests.pureTest(testArray);
 });
 
