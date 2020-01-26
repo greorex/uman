@@ -150,6 +150,6 @@ Please feel free to contact me if you have any questions.
 
 ## License
 
-Copyright © 2019-2020 Grigory Schurovski
+Copyright © 2019-2020 G. Schurovski
 
 Licensed under the [Apache-2.0](LICENSE) license.
