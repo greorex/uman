@@ -69,7 +69,7 @@ export default Unit.instance(
 );
 ```
 
-The class will be atomatically instantiated if it's used as a script part of web worker unit.
+The class will be automatically instantiated if it's used as a script part of web worker unit.
 
 But it's possible to use it as ES6+ module, with _import_ and _new_.
 
@@ -85,7 +85,7 @@ UnitWorker(worker: Worker);
 
 It's created automatically in case you initialize the unit with _Worker_.
 
-You may use web worker's methods, like _postMessage_ to exchange raw data with the worker thread, as well as _onmessage_ to catch events.
+You still may use web worker's methods, like _postMessage_ as well as _onmessage_ to catch events to exchange raw data with the worker thread. But with the _Uman_ you don't need to.
 
 <a name="units"></a>
 
