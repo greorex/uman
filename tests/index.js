@@ -38,7 +38,7 @@ class MainUnit extends Unit {
     return result;
   }
 
-  ondirectEmitTest(event) {
+  ondirectPostTest(event) {
     render(event.payload + " received");
   }
 
@@ -109,7 +109,7 @@ test("Worker Engine", async () => {
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
 
-  unit.emit("noManagerTest", "unit -> event sent");
+  unit.post("noManagerTest", "unit -> event sent");
 
   const result = await unit.noManagerTest(testArray);
 
@@ -119,7 +119,7 @@ test("Worker Engine", async () => {
 });
 
 test("Direct Call", async () => {
-  uman.units.emit("directEmitTest", "uman.units.emit -> event sent");
+  uman.units.post("directPostTest", "uman.units.post -> event sent");
   return await uman.units.tests.pureTest(testArray);
 });
 

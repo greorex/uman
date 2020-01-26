@@ -17,7 +17,7 @@ export default Unit.instance(
       // call method "sum" of Unit One
       one
         .sum(arr)
-        .then(result => units.emit("log", `Sum of [${arr}] = ${result}`));
+        .then(result => units.post("log", `Sum of [${arr}] = ${result}`));
 
       const sum = await Promise.all([
         // call method "cubes" of Unit Two
@@ -33,11 +33,11 @@ export default Unit.instance(
     }
 
     onnoManagerTest(event) {
-      this.emit(event.method, event.payload + " returned");
+      this.post(event.method, event.payload + " returned");
     }
 
-    ondirectEmitTest(event) {
-      this.units.emit(event.method, event.payload + " returned");
+    ondirectPostTest(event) {
+      this.units.post(event.method, event.payload + " returned");
     }
 
     async noManagerTest(arr) {
