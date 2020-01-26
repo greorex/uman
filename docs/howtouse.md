@@ -1,5 +1,7 @@
 # Units Manager
 
+_A javascript library to split your code with web workers_
+
 ## How to use
 
 Let's create units [One](#unit_one) and [Two](#unit_two) for calculation, [add](#unit_main) them to the _Uman_, and run [Tests](#unit_tests) unit with logging in the [Log](#unit_log) unit.

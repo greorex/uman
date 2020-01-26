@@ -1,5 +1,7 @@
 # Units Manager
 
+_A javascript library to split your code with web workers_
+
 ## API Reference
 
 Classes:
