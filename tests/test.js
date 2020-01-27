@@ -31,8 +31,9 @@ describe("runs all tests", () => {
     uman.addUnits({
       main: new MainUnit()
     });
-    expect(Object.keys(uman.units).length).toEqual(1);
-    expect(uman.units.main).toBeInstanceOf(MainUnit);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(1);
+    expect(uman._units.main).toBeInstanceOf(MainUnit);
   });
 
   test("all other units added", () => {
@@ -42,11 +43,14 @@ describe("runs all tests", () => {
       tests: () => import("./units/tests"),
       log: logLoader
     });
-    expect(Object.keys(uman.units).length).toEqual(5);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(5);
   });
 
   test("method accessed with direct call", async () => {
-    expect(uman.units.tests).toBeInstanceOf(UnitObject);
+    // check real list
+    expect(uman._units.tests).toBeInstanceOf(UnitObject);
+    // but call proxied
     const result = await uman.units.tests.pureTest(testArray);
     expect(result).toEqual("passed");
   });
@@ -65,11 +69,13 @@ describe("runs all tests", () => {
 
   test("unit 'tests' deleted", () => {
     uman.deleteUnit("tests");
-    expect(Object.keys(uman.units).length).toEqual(4);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(4);
   });
 
   test("all other units deleted", () => {
-    uman.deleteAll("tests");
-    expect(Object.keys(uman.units).length).toEqual(0);
+    uman.deleteAll();
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(0);
   });
 });
