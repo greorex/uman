@@ -71,7 +71,8 @@ export class UnitObject {
 
   _oncall(data) {
     const { method, payload } = data;
-    // method has to be declared
+    if (!(method in this))
+      throw new Error(`Method ${method} has to be declared in ${data.target}`);
     // may be async as well
     return this[method](...payload);
   }
@@ -206,7 +207,8 @@ class UnitBase extends UnitObject {
   _dispatch(data) {
     switch (data.type) {
       case MessageType.EVENT:
-        return this._onevent(data);
+        this._onevent(data);
+        return;
       case MessageType.REQUEST:
         return this._oncall(data);
     }
@@ -230,10 +232,24 @@ class UnitCallStack extends Map {
  * unit objects cache
  */
 class UnitObjectsCache extends UnitCallStack {
-  push(object) {
+  push(object, owner) {
     const key = this.next();
-    this.set(key, object);
-    return key;
+    this.set(key, {
+      object,
+      owner
+    });
+    return {
+      _object: key,
+      owner
+    };
+  }
+  _oncall(data) {
+    // do unitobject's
+    const { _object, owner } = data.object;
+    const reference = this.get(_object);
+    if (!reference)
+      throw new Error(`Wrong object for ${data.method} in ${owner}`);
+    return reference.object._oncall(data);
   }
 }
 
@@ -241,8 +257,8 @@ class UnitObjectsCache extends UnitCallStack {
  * object proxy
  */
 class UnitObjectProxy {
-  constructor(object, owner, unit) {
-    this.toArgument = () => ({ object, owner });
+  constructor(object, unit) {
+    this.object = object;
 
     return new Proxy(this, {
       get: (t, prop, receiver) => {
@@ -252,7 +268,7 @@ class UnitObjectProxy {
         return (...args) =>
           unit._redispatch({
             type: MessageType.REQUEST,
-            target: owner,
+            target: object.owner,
             method: prop,
             payload: args,
             object
@@ -261,14 +277,20 @@ class UnitObjectProxy {
     });
   }
 
+  toArgument() {
+    return this.object;
+  }
+
+  toResult() {
+    return this.object;
+  }
+
   static _checkArguments(args, f) {
     // one level only
     if (Array.isArray(args))
       return args.map(a =>
         // and object except
-        !(a instanceof Object) ||
-        a instanceof UnitObjectProxy ||
-        (a.object && a.owner)
+        !(a instanceof Object) || a instanceof UnitObjectProxy || a._object
           ? f(a)
           : UnitObjectProxy._checkArguments(a, f)
       );
@@ -287,9 +309,7 @@ class UnitObjectProxy {
 
   static fromArguments(args, unit) {
     return UnitObjectProxy._checkArguments(args, a =>
-      a instanceof Object && a.object && a.owner
-        ? new UnitObjectProxy(a.object, a.owner, unit)
-        : a
+      a instanceof Object && a._object ? new UnitObjectProxy(a, unit) : a
     );
   }
 }
@@ -301,11 +321,11 @@ class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
-    this.options.timeout = 5000;
-
     // private
     const _calls = new UnitCallStack();
-    const _objects = new UnitObjectsCache();
+
+    this._objects = null;
+    this.options.timeout = 5000;
 
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
@@ -328,24 +348,30 @@ class UnitWorkerEngine extends UnitBase {
             engine.postMessage(response);
             // call
             try {
-              const { name } = this;
               let result;
+
               // check arguments
               data.payload = UnitObjectProxy.fromArguments(data.payload, this);
-              // do unitobject's
-              if (data.object && (!name || name === data.target)) {
-                const object = _objects.get(data.object);
-                if (!object)
-                  throw new Error(`Wrong object for ${data.method} in ${name}`);
-                result = await object._oncall(data);
+
+              // object cache
+              let { _objects } = this;
+              if (!_objects) {
+                _objects = new UnitObjectsCache();
+                this._objects = _objects;
               }
+
+              if (data.object && _objects.has(data.object._object))
+                // do unitobject's
+                result = await _objects._oncall(data);
               // do own
               else result = await this._oncall(data);
-              // if unitobject returned
-              if (result instanceof UnitObject) {
-                response.proxy = true;
-                result = _objects.push(result);
-              }
+
+              // if unitobject's routine
+              if (result instanceof UnitObject)
+                result = _objects.push(result, data.target);
+              else if (result instanceof UnitObjectProxy)
+                result = result.toResult();
+
               response.result = result;
             } catch (error) {
               response.error = error;
@@ -401,14 +427,15 @@ class UnitWorkerEngine extends UnitBase {
             // next call id
             data.cid = _calls.next();
             // to restore call
-            c.onresponse = ({ error, result = null, proxy = false }) => {
+            c.onresponse = ({ error, result = null }) => {
               c.onreceipt instanceof Function && c.onreceipt();
               // remove call
               _calls.delete(data.cid);
               // promise's time
               if (error) reject(new Error(error));
-              else if (!proxy) resolve(result);
-              else resolve(new UnitObjectProxy(result, name, this));
+              else if (result._object)
+                resolve(new UnitObjectProxy(result, this));
+              else resolve(result);
             };
             // store call
             _calls.set(data.cid, c);
@@ -515,6 +542,8 @@ export class UnitsManager {
     this.units = new UnitsProxy(this);
     // copy entries
     this.addUnits(units);
+    // objects cash
+    this._objects = new UnitObjectsCache();
   }
 
   _attachUnit(name, value) {
@@ -540,6 +569,8 @@ export class UnitsManager {
       data.sender = unit.name;
       return this._redispatch(data);
     };
+    // @ts-ignore
+    unit._objects = this._objects;
     // update list
     this._units[name] = unit;
     return unit;

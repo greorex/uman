@@ -9,10 +9,20 @@ const logLoader = innerLog ? new Log() : () => new Log();
 
 if (!global.Worker) global.Worker = class Worker {};
 
+class TestsObject extends UnitObject {
+  sum(arr) {
+    return pureSum(arr);
+  }
+}
+
 // main class to run app
 class MainUnit extends Unit {
   async run(arr) {
     return await this.units.tests.run(arr);
+  }
+
+  newObject() {
+    return new TestsObject();
   }
 }
 
@@ -65,6 +75,11 @@ describe("runs all tests", () => {
     const oneObject = await uman.units.one.newObject();
     const result = await oneObject.test({ testsObject, arr: testArray });
     expect(result).toEqual(pureSum(testArray));
+  });
+
+  test("args and returns from worker", async () => {
+    const result = await uman.units.tests.testArgsReturns(testArray);
+    expect(result).toEqual("passed");
   });
 
   test("unit 'tests' deleted", () => {
