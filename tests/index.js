@@ -1,4 +1,4 @@
-import { UnitsManager, UnitWorker, Unit } from "uman";
+import { UnitsManager, UnitWorker, Unit, UnitObject } from "uman";
 
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
@@ -12,9 +12,11 @@ const render = message => {
   document.body.appendChild(p);
 };
 
-// simple test, no manager
-
-// unit manager test
+class TestsObject extends UnitObject {
+  sum(arr) {
+    return pureSum(arr);
+  }
+}
 
 // main class to run app
 class MainUnit extends Unit {
@@ -47,6 +49,10 @@ class MainUnit extends Unit {
     const oneObject = await this.units.one.newObject();
     const result = await oneObject.test({ testsObject, arr });
     return result === pureSum(arr) ? "passed" : "failed";
+  }
+
+  newObject() {
+    return new TestsObject();
   }
 }
 
@@ -84,7 +90,7 @@ class TestEngine {
 
   async run() {
     for (let item of this.cases) {
-      render("+ Test " + item.name);
+      render("+ " + item.name);
       try {
         render("Test " + (await item.func()));
       } catch (error) {
@@ -129,6 +135,10 @@ test("Units Manager", async () => {
 
 test("Args and Returns", async () => {
   return await uman.units.main.testArgsReturns(testArray);
+});
+
+test("Args and Returns from worker", async () => {
+  return await uman.units.tests.testArgsReturns(testArray);
 });
 
 te.run();

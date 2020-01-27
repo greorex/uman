@@ -40,13 +40,16 @@ export default Unit.instance(
       this.units.post(event.method, event.payload + " returned");
     }
 
-    ondirectEmitTest(event) {
-      this.units.emit(event.method, event.payload + " returned");
-    }
-
     async noManagerTest(arr) {
       const result = await this.sum(arr);
       return pureSum(arr) === result ? "passed" : "failed";
+    }
+
+    async testArgsReturns(arr) {
+      const testsObject = await this.units.main.newObject();
+      const oneObject = await this.units.one.newObject();
+      const result = await oneObject.test({ testsObject, arr });
+      return result === pureSum(arr) ? "passed" : "failed";
     }
 
     newObject() {

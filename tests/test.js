@@ -9,10 +9,20 @@ const logLoader = innerLog ? new Log() : () => new Log();
 
 if (!global.Worker) global.Worker = class Worker {};
 
+class TestsObject extends UnitObject {
+  sum(arr) {
+    return pureSum(arr);
+  }
+}
+
 // main class to run app
 class MainUnit extends Unit {
   async run(arr) {
     return await this.units.tests.run(arr);
+  }
+
+  newObject() {
+    return new TestsObject();
   }
 }
 
@@ -31,8 +41,9 @@ describe("runs all tests", () => {
     uman.addUnits({
       main: new MainUnit()
     });
-    expect(Object.keys(uman.units).length).toEqual(1);
-    expect(uman.units.main).toBeInstanceOf(MainUnit);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(1);
+    expect(uman._units.main).toBeInstanceOf(MainUnit);
   });
 
   test("all other units added", () => {
@@ -42,11 +53,14 @@ describe("runs all tests", () => {
       tests: () => import("./units/tests"),
       log: logLoader
     });
-    expect(Object.keys(uman.units).length).toEqual(5);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(5);
   });
 
   test("method accessed with direct call", async () => {
-    expect(uman.units.tests).toBeInstanceOf(UnitObject);
+    // check real list
+    expect(uman._units.tests).toBeInstanceOf(UnitObject);
+    // but call proxied
     const result = await uman.units.tests.pureTest(testArray);
     expect(result).toEqual("passed");
   });
@@ -63,13 +77,20 @@ describe("runs all tests", () => {
     expect(result).toEqual(pureSum(testArray));
   });
 
+  test("args and returns from worker", async () => {
+    const result = await uman.units.tests.testArgsReturns(testArray);
+    expect(result).toEqual("passed");
+  });
+
   test("unit 'tests' deleted", () => {
     uman.deleteUnit("tests");
-    expect(Object.keys(uman.units).length).toEqual(4);
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(4);
   });
 
   test("all other units deleted", () => {
-    uman.deleteAll("tests");
-    expect(Object.keys(uman.units).length).toEqual(0);
+    uman.deleteAll();
+    // check real list
+    expect(Object.keys(uman._units).length).toEqual(0);
   });
 });
