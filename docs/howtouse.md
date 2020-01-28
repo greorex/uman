@@ -4,7 +4,7 @@ _A javascript library to split your code with web workers_
 
 ## How to use
 
-Let's create units [One](#unit_one) and [Two](#unit_two) for calculation, [add](#unit_main) them to the _Uman_, and run [Tests](#unit_tests) unit with logging in the [Log](#unit_log) unit.
+Let's create units [One](#unit_one) and [Two](#unit_two) for calculation, add them to the [Main](#unit_main) and run [Tests](#unit_tests) unit with logging in the [Log](#unit_log) unit.
 
 > Note, the syntax of units is equal and doesn't depend on where the units will be, in the main thread or in the workers.
 
@@ -113,10 +113,10 @@ export default Unit.instance(
 `index.js`
 
 ```javascript
-import { UnitsManager, Unit } from "uman";
+import { UnitMain, Unit } from "uman";
 
 // main class to run app
-class MainUnit extends Unit {
+class Main extends UnitMain {
   constructor() {
     super();
 
@@ -138,15 +138,12 @@ class MainUnit extends Unit {
 }
 
 // add main unit
-const uman = new UnitsManager({
-  // create on demand
-  main: () => new MainUnit()
-});
+const main = new Main();
 
 import LogUnit from "./units/log";
 
 // add units
-uman.addUnits({
+main.add({
   // web worker thread
   one: () => new Worker("./units/one.js", { type: "module" }),
   // lazy import
@@ -158,7 +155,7 @@ uman.addUnits({
 });
 
 // run
-uman.units.main.run([2, 3, 4]);
+main.run([2, 3, 4]);
 ```
 
 Thats all.

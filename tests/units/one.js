@@ -20,7 +20,7 @@ export default Unit.instance(
       return this.sum(cubes);
     }
 
-    newObject() {
+    OneObject() {
       return new OneObject();
     }
   }

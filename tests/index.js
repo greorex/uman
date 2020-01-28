@@ -1,4 +1,4 @@
-import { UnitsManager, UnitWorker, Unit, UnitObject } from "uman";
+import { UnitMain, UnitWorker, UnitObject } from "uman";
 
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
@@ -19,7 +19,7 @@ class TestsObject extends UnitObject {
 }
 
 // main class to run app
-class MainUnit extends Unit {
+class Main extends UnitMain {
   constructor() {
     super();
 
@@ -45,25 +45,22 @@ class MainUnit extends Unit {
   }
 
   async testArgsReturns(arr) {
-    const testsObject = await this.units.tests.newObject();
-    const oneObject = await this.units.one.newObject();
+    const testsObject = await this.units.tests.TestsObject();
+    const oneObject = await this.units.one.OneObject();
     const result = await oneObject.test({ testsObject, arr });
     return result === pureSum(arr) ? "passed" : "failed";
   }
 
-  newObject() {
+  TestsObject() {
     return new TestsObject();
   }
 }
 
-// add main unit
-const uman = new UnitsManager({
-  // instance
-  main: new MainUnit()
-});
+// main unit
+const main = new Main();
 
 // add units
-uman.addUnits({
+main.add({
   // worker thread
   one: new Worker("./units/one.js", { type: "module" }),
   // lazy import
@@ -125,20 +122,26 @@ test("Worker Engine", async () => {
 });
 
 test("Direct Call", async () => {
-  uman.units.post("directPostTest", "uman.units.post -> event sent");
-  return await uman.units.tests.pureTest(testArray);
+  main.units.post("directPostTest", "main.units.post -> event sent");
+  return await main.units.tests.pureTest(testArray);
 });
 
 test("Units Manager", async () => {
-  return await uman.units.main.test(testArray);
+  return await main.test(testArray);
 });
 
 test("Args and Returns", async () => {
-  return await uman.units.main.testArgsReturns(testArray);
+  return await main.testArgsReturns(testArray);
 });
 
 test("Args and Returns from worker", async () => {
-  return await uman.units.tests.testArgsReturns(testArray);
+  return await main.units.tests.testArgsReturns(testArray);
+});
+
+test("Terminate", async () => {
+  main.terminate();
+  // check real list
+  return !Object.keys(main._units).length ? "passed" : "failed";
 });
 
 te.run();

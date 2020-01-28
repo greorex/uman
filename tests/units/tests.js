@@ -46,13 +46,13 @@ export default Unit.instance(
     }
 
     async testArgsReturns(arr) {
-      const testsObject = await this.units.main.newObject();
-      const oneObject = await this.units.one.newObject();
+      const testsObject = await this.units.main.TestsObject();
+      const oneObject = await this.units.one.OneObject();
       const result = await oneObject.test({ testsObject, arr });
       return result === pureSum(arr) ? "passed" : "failed";
     }
 
-    newObject() {
+    TestsObject() {
       return new TestsObject();
     }
   }

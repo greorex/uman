@@ -6,9 +6,10 @@ _A javascript library to split your code with web workers_
 
 Classes:
 
-- [UnitsManager](#units_manager)
 - [Unit](#unit)
+- [UnitMain](#unit_main)
 - [UnitWorker](#unit_worker)
+- [UnitsManager](#units_manager)
 - property: [units](#units)
 
 Special:
@@ -33,11 +34,11 @@ UnitsManager(units: Object like {
   name: () => import('pathto/unit.js');
 })
 
-addUnits(units: see constructor) : UnitsManager
+// to add other units
+add(units: see constructor) : UnitsManager
 
-deleteUnit(name: string)
-
-deleteAllUnits()
+// to terminate unit
+terminate(name?: string) // all by default
 ```
 
 <a name="unit"></a>
@@ -87,6 +88,16 @@ It's created automatically in case you initialize the unit with _Worker_.
 
 You still may use web worker's methods, like _postMessage_ as well as _onmessage_ to catch events to exchange raw data with the worker thread. But with the _Uman_ you don't need to.
 
+<a name="unit_main"></a>
+
+### UnitMain
+
+Class to create main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
+
+```typescript
+UnitMain(name?: string); // "main" by default
+```
+
 <a name="units"></a>
 
 ### Property "units"
@@ -97,25 +108,22 @@ Each class has special property:
 units: Object;
 ```
 
-1. to call "method" of "other" unit:
+Somethere in your unit:
 
 ```javascript
-async units.other.method(...args);
-```
+// 1) to call "method" of "other" unit:
+async this.units.other.method(...args);
 
-2. to catch "event" from "other" unit:
+// 2) to catch "event" from "other" unit:
+this.units.other.onevent = payload => {
+  // do things
+};
 
-```javascript
-units.other.onevent = payload => {};
-```
-
-3. to post events:
-
-```javascript
+// 3) to post events:
 // to all units
-units.post("event", payload);
+this.units.post("event", payload);
 // to "other" unit
-units.other.post("event", payload);
+this.units.other.post("event", payload);
 ```
 
 <a name="unit_object"></a>
@@ -133,6 +141,7 @@ Technically, the object will live in the unit's thread but you may call it's met
 ```javascript
 class MyObject extends UnitObject {
   constructor(...args) {
+    super();
     // init with args
   }
   method(...args) {
@@ -147,24 +156,24 @@ class MyObject extends UnitObject {
 
 export default Unit.instance(
   class extends Unit {
-    createMyObject(...args) {
+    MyObject(...args) {
       return new MyObject(...args);
     }
   }
 );
 ```
 
-Somethere in the code:
+Somethere in your unit:
 
 ```javascript
-// create objects
-const object1 = uman.units.unit.createMyObject(...args);
-const object2 = uman.units.unit.createMyObject(...args);
+// call "unit" to create objects
+const object1 = this.units.unit.MyObject(...args);
+const object2 = this.units.unit.MyObject(...args);
 // do things
 const result1 = object1.method(...args);
 const result2 = object2.method(...args);
 // you my pass them as arguments as well
-const object3 = uman.units.other.method(object1, ...args);
+const object3 = this.units.other.method(object1, ...args);
 // or
 const result3 = object3.method({ object2, ...args });
 ```

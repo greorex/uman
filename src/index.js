@@ -41,6 +41,13 @@ export const TargetType = {
 };
 
 /**
+ * default unit's options
+ */
+export const UnitOptionsDefault = {
+  timeout: 0 // 5000
+};
+
+/**
  * unit object base, event emitter
  */
 export class UnitObject {
@@ -146,7 +153,7 @@ class UnitBase extends UnitObject {
   constructor() {
     super();
 
-    this.options = {};
+    this.options = { ...UnitOptionsDefault };
 
     // manager engine
     this.name = "";
@@ -201,16 +208,15 @@ class UnitBase extends UnitObject {
     // raw call 'onmethod(eventobject)'
     // priority #3
     const m = `on${method}`;
-    if (m in this && this[m](data)) return;
+    m in this && this[m](data);
   }
 
   _dispatch(data) {
     switch (data.type) {
-      case MessageType.EVENT:
-        this._onevent(data);
-        return;
       case MessageType.REQUEST:
         return this._oncall(data);
+      case MessageType.EVENT:
+        this._onevent(data);
     }
   }
 }
@@ -269,9 +275,9 @@ class UnitObjectProxy {
           unit._redispatch({
             type: MessageType.REQUEST,
             target: object.owner,
+            object,
             method: prop,
-            payload: args,
-            object
+            payload: args
           });
       }
     });
@@ -321,80 +327,73 @@ class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
+    this._objects = undefined;
+
     // private
     const _calls = new UnitCallStack();
+    const _handlers = {
+      [MessageType.EVENT]: data => {
+        this._onevent(data);
+      },
 
-    this._objects = null;
-    this.options.timeout = 5000;
+      [MessageType.REQUEST]: async data => {
+        const response = {
+          cid: data.cid
+        };
+        // receipt
+        response.type = MessageType.RECEIPT;
+        engine.postMessage(response);
+        // call
+        try {
+          // check arguments
+          data.payload = UnitObjectProxy.fromArguments(data.payload, this);
+
+          // object cache
+          let { _objects } = this;
+          // own cache
+          if (!_objects) this._objects = _objects = new UnitObjectsCache();
+
+          // do unitobject's or own
+          const object =
+            data.object && _objects.has(data.object._object) ? _objects : this;
+
+          // call and wait
+          let result = await object._oncall(data);
+
+          // if unitobject's routine
+          if (result instanceof UnitObject)
+            result = _objects.push(result, data.target);
+          else if (result instanceof UnitObjectProxy)
+            result = result.toResult();
+
+          response.result = result;
+        } catch (error) {
+          response.error = error;
+        }
+        // response
+        response.type = MessageType.RESPONSE;
+        engine.postMessage(response);
+      },
+
+      [MessageType.RESPONSE]: data => {
+        const c = _calls.get(data.cid);
+        c && c.onresponse(data);
+      },
+
+      [MessageType.RECEIPT]: data => {
+        const c = _calls.get(data.cid);
+        c && c.onreceipt instanceof Function && c.onreceipt();
+      }
+    };
 
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
-    engine.onmessage = async event => {
+    engine.onmessage = event => {
       const { data } = event;
       // is this our message?
-      if (data instanceof Object) {
-        switch (data.type) {
-          case MessageType.EVENT:
-            this._onevent(data);
-            return;
-
-          case MessageType.REQUEST: {
-            const response = {
-              cid: data.cid
-            };
-            // receipt
-            response.type = MessageType.RECEIPT;
-            engine.postMessage(response);
-            // call
-            try {
-              let result;
-
-              // check arguments
-              data.payload = UnitObjectProxy.fromArguments(data.payload, this);
-
-              // object cache
-              let { _objects } = this;
-              if (!_objects) {
-                _objects = new UnitObjectsCache();
-                this._objects = _objects;
-              }
-
-              if (data.object && _objects.has(data.object._object))
-                // do unitobject's
-                result = await _objects._oncall(data);
-              // do own
-              else result = await this._oncall(data);
-
-              // if unitobject's routine
-              if (result instanceof UnitObject)
-                result = _objects.push(result, data.target);
-              else if (result instanceof UnitObjectProxy)
-                result = result.toResult();
-
-              response.result = result;
-            } catch (error) {
-              response.error = error;
-            }
-            // response
-            response.type = MessageType.RESPONSE;
-            engine.postMessage(response);
-            return;
-          }
-
-          case MessageType.RESPONSE: {
-            const c = _calls.get(data.cid);
-            c && c.onresponse(data);
-            return;
-          }
-
-          case MessageType.RECEIPT: {
-            const c = _calls.get(data.cid);
-            c && c.onreceipt instanceof Function && c.onreceipt();
-            return;
-          }
-        }
-      }
+      if (data instanceof Object && data.type in _handlers)
+        return _handlers[data.type](data);
       // call standard listener
       // @ts-ignore
       this.onmessage instanceof Function && this.onmessage(event);
@@ -403,11 +402,6 @@ class UnitWorkerEngine extends UnitBase {
     // override dispatcher
     this._dispatch = data => {
       switch (data.type) {
-        case MessageType.EVENT:
-          // just post
-          engine.postMessage(data);
-          return;
-
         case MessageType.REQUEST:
           // post and wait
           return new Promise((resolve, reject) => {
@@ -444,6 +438,10 @@ class UnitWorkerEngine extends UnitBase {
             // and post
             engine.postMessage(data);
           });
+
+        case MessageType.EVENT:
+          // just post
+          engine.postMessage(data);
       }
     };
   }
@@ -534,16 +532,43 @@ class UnitLazyLoader extends UnitBase {
 /**
  * units orchestration engine
  */
-export class UnitsManager {
+export class UnitsManager extends Unit {
   constructor(units = {}) {
+    super();
+
     // real list
     this._units = {};
-    // proxy list
-    this.units = new UnitsProxy(this);
-    // copy entries
-    this.addUnits(units);
-    // objects cash
+    // common objects cash
     this._objects = new UnitObjectsCache();
+    // copy entries
+    this.add(units);
+
+    // override redispatcher
+    this._redispatch = data => {
+      const { target, sender } = data;
+
+      switch (target) {
+        case TargetType.ALL:
+          // to all except sender
+          for (let [name, unit] of Object.entries(this._units))
+            if (
+              name !== sender &&
+              !(unit instanceof UnitLazyLoader) &&
+              unit instanceof UnitBase
+            )
+              unit._dispatch(data);
+          return;
+
+        default:
+          const unit = this._units[target];
+          if (unit instanceof UnitBase)
+            // load if doesn't
+            return unit._dispatch(data);
+      }
+
+      // not a unit or wrong target
+      throw new Error(`Wrong target unit: ${target}`);
+    };
   }
 
   _attachUnit(name, value) {
@@ -569,6 +594,7 @@ export class UnitsManager {
       data.sender = unit.name;
       return this._redispatch(data);
     };
+    // common objects cache
     // @ts-ignore
     unit._objects = this._objects;
     // update list
@@ -576,33 +602,7 @@ export class UnitsManager {
     return unit;
   }
 
-  _redispatch(data) {
-    const { target, sender } = data;
-
-    switch (target) {
-      case TargetType.ALL:
-        // to all except sender
-        for (let k of Object.keys(this._units)) {
-          if (k !== sender) {
-            // only to loaded units
-            const u = this._units[k];
-            if (!(u instanceof UnitLazyLoader) && u instanceof UnitBase)
-              u._dispatch(data);
-          }
-        }
-        return;
-
-      default:
-        // load if doesn't
-        const u = this._units[target];
-        if (u instanceof UnitBase) return u._dispatch(data);
-    }
-
-    // not a unit or wrong target
-    throw new Error(`Wrong target unit: ${target}`);
-  }
-
-  addUnits(units) {
+  add(units) {
     for (let [name, unit] of Object.entries(units)) {
       // check duplication
       if (this._units[name]) throw new Error(`Unit ${unit} already exists`);
@@ -615,15 +615,35 @@ export class UnitsManager {
     return this;
   }
 
-  deleteUnit(name) {
-    const unit = this._units[name];
-    // stop it if loaded
-    if (unit instanceof UnitBase) unit.terminate();
-    // drop it
-    if (unit) delete this._units[name];
+  terminate(name = null) {
+    if (!name) {
+      // delete this
+      super.terminate();
+      delete this._units[this.name];
+      // delete All
+      for (let name of Object.keys(this._units)) this.terminate(name);
+    } else {
+      // delete by name
+      const unit = this._units[name];
+      // stop it if loaded
+      if (unit instanceof UnitBase) unit.terminate();
+      // drop it
+      if (unit) delete this._units[name];
+    }
   }
+}
 
-  deleteAll() {
-    for (let name of Object.keys(this._units)) this.deleteUnit(name);
+/**
+ * main unit with built in manager
+ */
+export class UnitMain extends UnitsManager {
+  constructor(name = "main") {
+    super();
+
+    // atach
+    this.name = name;
+    this._units = {
+      [this.name]: this
+    };
   }
 }
