@@ -63,6 +63,7 @@ const main = new Main();
 main.add({
   // worker thread
   one: new Worker("./units/one.js", { type: "module" }),
+  // one: () => import("./units/one"),
   // lazy import
   two: import("./units/two"),
   // other worker thread on demand
