@@ -108,7 +108,7 @@ Each class has special property:
 units: Object;
 ```
 
-Somethere in your unit:
+Somewhere in your unit:
 
 ```javascript
 // 1) to call "method" of "other" unit:
@@ -163,7 +163,7 @@ export default Unit.instance(
 );
 ```
 
-Somethere in your unit:
+Somewhere in your unit:
 
 ```javascript
 // call "unit" to create objects
