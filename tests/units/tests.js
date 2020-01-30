@@ -4,6 +4,7 @@ import { pureTest, pureSum } from "./../pure";
 
 class TestsObject extends UnitObject {
   sum(arr) {
+    this.fire("sum", arr);
     return pureSum(arr);
   }
 }
@@ -33,11 +34,11 @@ export default Unit.instance(
     }
 
     onnoManagerTest(event) {
-      this.post(event.method, event.payload + " returned");
+      this.post(event.method, event.args[0] + " returned");
     }
 
-    ondirectPostTest(event) {
-      this.units.post(event.method, event.payload + " returned");
+    ontestEvents(event) {
+      this.units.post(event.method, event.args[0] + " returned");
     }
 
     async noManagerTest(arr) {
@@ -47,7 +48,15 @@ export default Unit.instance(
 
     async testArgsReturns(arr) {
       const testsObject = await this.units.main.TestsObject();
+      testsObject.on("sum", arr => {
+        this.units.post("log", "callback: testsObject.onsum " + arr);
+      });
+
       const oneObject = await this.units.one.OneObject();
+      oneObject.on("test", () => {
+        this.units.post("log", "callback: oneObject.ontest");
+      });
+
       const result = await oneObject.test({ testsObject, arr });
       return result === pureSum(arr) ? "passed" : "failed";
     }

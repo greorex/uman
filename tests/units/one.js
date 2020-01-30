@@ -2,6 +2,7 @@ import { Unit, UnitObject } from "uman";
 
 class OneObject extends UnitObject {
   async test({ testsObject, arr }) {
+    this.fire("test");
     return await testsObject.sum(arr);
   }
 }

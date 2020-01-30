@@ -15,11 +15,15 @@ import { UnitObject } from "./object";
 import { UnitsProxy } from "./proxy";
 import { UnitCallsEngine } from "./calls";
 
+// locals
+const EVENT = MessageType.EVENT;
+const REQUEST = MessageType.REQUEST;
+
 /**
  * default unit's options
  */
 export const UnitOptionsDefault = {
-  timeout: 5000
+  timeout: 0 //5000
 };
 
 /**
@@ -47,18 +51,22 @@ export class UnitBase extends UnitObject {
         // method asked
         return (...args) =>
           receiver._dispatch({
-            type: MessageType.REQUEST,
+            type: REQUEST,
             method: prop,
-            payload: args
+            args
           });
       }
     });
   }
 
+  _assign(name) {
+    this.name = name;
+  }
+
   terminate() {}
 
   _onevent(data) {
-    const { method, payload, sender } = data;
+    const { method, args, sender } = data;
     // do if exists
     // trick to have short 'on...'
     if (sender) {
@@ -67,13 +75,13 @@ export class UnitBase extends UnitObject {
       const p = this.units[sender];
       if (p) {
         const m = `on${method}`;
-        if (m in p && p[m](...payload)) return;
+        if (m in p && p[m](...args)) return;
       }
 
       // onsendermethod(...args)
       // priority #2
       const m = `on${sender}${method}`;
-      if (m in this && this[m](...payload)) return;
+      if (m in this && this[m](...args)) return;
     }
 
     // raw call 'onmethod(eventobject)'
@@ -84,10 +92,10 @@ export class UnitBase extends UnitObject {
 
   _dispatch(data) {
     switch (data.type) {
-      case MessageType.REQUEST:
+      case REQUEST:
         return this._calls.execute(data, this);
 
-      case MessageType.EVENT:
+      case EVENT:
         this._onevent(data);
     }
   }

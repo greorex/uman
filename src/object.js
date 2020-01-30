@@ -40,10 +40,10 @@ export class UnitObject {
   }
 
   _oncall(data) {
-    const { method, payload } = data;
+    const { method, args } = data;
     if (!(method in this))
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
     // may be async as well
-    return this[method](...payload);
+    return this[method](...args);
   }
 }

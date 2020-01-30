@@ -3,7 +3,7 @@ import { pureSum } from "./pure";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
-const innerLog = false;
+const innerLog = true;
 
 const logLoader = innerLog ? new Log() : () => new Log();
 
@@ -11,6 +11,7 @@ if (!global.Worker) global.Worker = class Worker {};
 
 class TestsObject extends UnitObject {
   sum(arr) {
+    this.fire("sum", arr);
     return pureSum(arr);
   }
 }
@@ -19,6 +20,10 @@ class TestsObject extends UnitObject {
 class Main extends UnitMain {
   async run(arr) {
     return await this.units.tests.run(arr);
+  }
+
+  ontestEvents(event) {
+    this.units.post("log", event.args[0] + " received");
   }
 
   TestsObject() {
@@ -51,11 +56,13 @@ describe("runs all tests", () => {
     expect(Object.keys(main._units).length).toEqual(5);
   });
 
-  test("method accessed with direct call", async () => {
+  test("methods and events", async () => {
     // check real list
     expect(main._units.tests).toBeInstanceOf(UnitObject);
     // but call proxied
     const result = await main.units.tests.pureTest(testArray);
+    // post event
+    main.units.post("testEvents", "main.units.post -> event sent");
     expect(result).toEqual("passed");
   });
 
@@ -66,7 +73,15 @@ describe("runs all tests", () => {
 
   test("args and returns", async () => {
     const testsObject = await main.units.tests.TestsObject();
+    testsObject.on("sum", arr => {
+      main.units.post("log", "callback: testsObject.onsum " + arr);
+    });
+
     const oneObject = await main.units.one.OneObject();
+    oneObject.on("test", () => {
+      main.units.post("log", "callback: oneObject.ontest");
+    });
+
     const result = await oneObject.test({ testsObject, arr: testArray });
     expect(result).toEqual(pureSum(testArray));
   });

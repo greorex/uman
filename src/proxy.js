@@ -12,6 +12,11 @@
 
 import { MessageType, TargetType } from "./enums";
 
+// locals
+const EVENT = MessageType.EVENT;
+const REQUEST = MessageType.REQUEST;
+const ALL = TargetType.ALL;
+
 /**
  * Units proxy target engine
  */
@@ -20,10 +25,10 @@ class UnitsProxyTarget {
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
       unit._redispatch({
-        type: MessageType.EVENT,
+        type: EVENT,
         target,
         method,
-        payload: args
+        args
       });
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(...args)
@@ -34,10 +39,10 @@ class UnitsProxyTarget {
         // request method
         return (...args) =>
           unit._redispatch({
-            type: MessageType.REQUEST,
+            type: REQUEST,
             target,
             method: prop,
-            payload: args
+            args
           });
       }
     });
@@ -52,10 +57,10 @@ export class UnitsProxy {
     // 1. unit.units.post(method, ...args) -> to all units
     this.post = (method, ...args) =>
       unit._redispatch({
-        type: MessageType.EVENT,
-        target: TargetType.ALL,
+        type: EVENT,
+        target: ALL,
         method,
-        payload: args
+        args
       });
 
     // const other = unit.units.other;

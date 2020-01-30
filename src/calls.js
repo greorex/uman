@@ -13,6 +13,9 @@
 import { MessageType } from "./enums";
 import { UnitObject } from "./object";
 
+// locals
+const REQUEST = MessageType.REQUEST;
+
 /**
  * object proxy
  */
@@ -31,22 +34,14 @@ class UnitObjectProxy {
         // unit knows
         return (...args) =>
           unit._redispatch({
-            type: MessageType.REQUEST,
+            type: REQUEST,
             target: reference.owner,
             object: reference,
             method: prop,
-            payload: args
+            args
           });
       }
     });
-  }
-
-  toArgument() {
-    return this.reference;
-  }
-
-  toResult() {
-    return this.reference;
   }
 }
 
@@ -54,25 +49,33 @@ class UnitObjectProxy {
  * value checker
  */
 const UnitValue = {
+  // simple
   isValue: a => !(a instanceof Object),
+  // to check
   isObject: a => a instanceof UnitObject,
-  isReference: a => a instanceof Object && a._object,
   isProxy: a => a instanceof UnitObjectProxy,
+  isReference: a => a instanceof Object && (a._object || a._function),
   // to pass to/from worker
   mapArguments: (args, f) => {
     // one level only
-    if (Array.isArray(args))
-      return args.map(a =>
+    if (Array.isArray(args)) {
+      for (let i = args.length; i--; ) {
+        const a = args[i];
+        // as is
+        if (UnitValue.isValue(a) || Array.isArray(a)) continue;
         // and object except
-        UnitValue.isValue(a) || UnitValue.isProxy(a) || UnitValue.isReference(a)
-          ? f(a)
-          : UnitValue.mapArguments(a, f)
-      );
-    else if (args instanceof Object) {
-      const r = {};
-      for (let [key, a] of Object.entries(args)) r[key] = f(a);
-      return r;
+        args[i] =
+          UnitValue.isProxy(a) ||
+          UnitValue.isReference(a) ||
+          a instanceof Function
+            ? f(a)
+            : UnitValue.mapArguments(a, f);
+      }
+    } else if (args instanceof Object) {
+      for (let [key, a] of Object.entries(args)) args[key] = f(a);
     }
+
+    return args;
   }
 };
 
@@ -91,36 +94,48 @@ export class UnitCallsEngine extends Map {
     return ++this._n;
   }
 
-  cache(object, owner) {
-    const key = this.next();
-    this.set(key, {
-      object,
-      owner
-    });
+  cache(object, key = "_object") {
+    const owner = this._unit.name,
+      id = this.next();
+    this.set(id, object);
     return {
-      _object: key,
+      [key]: id,
       owner
     };
   }
 
-  exists(object) {
-    return object ? this.has(object._object) : 0;
+  object(reference) {
+    if (reference._object) return new UnitObjectProxy(reference, this._unit);
+    if (reference._function)
+      return (...args) => {
+        this._unit._redispatch({
+          type: REQUEST,
+          target: reference.owner,
+          object: reference,
+          args
+        });
+      };
   }
 
-  execute(data, handler = null) {
-    // find proper handler
-    if (this.exists(data.object)) handler = this;
-    // call
-    return handler._oncall(data);
-  }
-
-  _oncall(data) {
-    const { _object, owner } = data.object;
-    const pointer = this.get(_object);
-    if (!pointer)
-      throw new Error(`Wrong object for ${data.method} in ${owner}`);
-    // do unitobject's
-    return pointer.object._oncall(data);
+  execute(data, handler) {
+    const { object } = data;
+    // default
+    if (!(object && object.owner === this._unit.name))
+      return handler._oncall(data);
+    // object's
+    if (object._object) {
+      const o = this.get(object._object);
+      if (!UnitValue.isObject(o))
+        throw new Error(`Wrong object for ${data.method} in ${object.owner}`);
+      return o._oncall(data);
+    }
+    // function's
+    if (object._function) {
+      const f = this.get(object._function);
+      if (!(f instanceof Function))
+        throw new Error(`Wrong function in ${object.owner}`);
+      return f(...data.args);
+    }
   }
 
   onresponse(data) {
@@ -133,33 +148,25 @@ export class UnitCallsEngine extends Map {
     c && c.onreceipt instanceof Function && c.onreceipt();
   }
 
-  toArguments(args) {
-    return UnitValue.mapArguments(args, a =>
-      UnitValue.isObject(a)
-        ? this.cache(a, this._unit.name)
-        : UnitValue.isProxy(a)
-        ? a.toArgument()
-        : a
-    );
-  }
-
-  fromArguments(args) {
-    return UnitValue.mapArguments(args, a =>
-      UnitValue.isReference(a) ? new UnitObjectProxy(a, this._unit) : a
-    );
-  }
-
-  toResult(result, owner = null) {
+  toResult(result) {
     return UnitValue.isObject(result)
-      ? this.cache(result, owner)
+      ? this.cache(result)
+      : result instanceof Function
+      ? this.cache(result, "_function")
       : UnitValue.isProxy(result)
-      ? result.toResult()
+      ? result.reference
       : result;
   }
 
   fromResult(result) {
-    return UnitValue.isReference(result)
-      ? new UnitObjectProxy(result, this._unit)
-      : result;
+    return UnitValue.isReference(result) ? this.object(result) : result;
+  }
+
+  toArguments(args) {
+    return UnitValue.mapArguments(args, a => this.toResult(a));
+  }
+
+  fromArguments(args) {
+    return UnitValue.mapArguments(args, a => this.fromResult(a));
   }
 }

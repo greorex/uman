@@ -15,6 +15,9 @@ import { UnitBase } from "./base";
 import { UnitWorker } from "./worker";
 import { Unit } from "./unit";
 
+// locals
+const ALL = TargetType.ALL;
+
 /**
  * lazy loader engine
  */
@@ -57,10 +60,11 @@ export class UnitsManager extends Unit {
 
     // override redispatcher
     this._redispatch = data => {
-      const { target, sender } = data;
+      if (!data.sender) data.sender = this.name;
 
+      const { target, sender } = data;
       switch (target) {
-        case TargetType.ALL:
+        case ALL:
           // to all except sender
           for (let [name, unit] of Object.entries(this._units))
             if (
@@ -102,18 +106,19 @@ export class UnitsManager extends Unit {
       throw new Error(`Wrong class of unit: ${name}`);
 
     // attach
-    unit.name = name;
+    unit._assign(name);
     unit._redispatch = data => {
-      // to know who
-      data.sender = unit.name;
+      // from
+      data.sender = name;
+      // to all
       return this._redispatch(data);
     };
     // common
-    unit._listeners = this._listeners;
     unit._calls = this._calls;
 
     // update list
     this._units[name] = unit;
+
     return unit;
   }
 

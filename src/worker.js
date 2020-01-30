@@ -13,6 +13,12 @@
 import { MessageType } from "./enums";
 import { UnitBase } from "./base";
 
+// locals
+const EVENT = MessageType.EVENT;
+const REQUEST = MessageType.REQUEST;
+const RESPONSE = MessageType.RESPONSE;
+const RECEIPT = MessageType.RECEIPT;
+
 /**
  * unit worker communication engine
  */
@@ -22,16 +28,16 @@ class UnitWorkerEngine extends UnitBase {
 
     // private
     const _handlers = {
-      [MessageType.EVENT]: data => this._onevent(data),
+      [EVENT]: data => this._onevent(data),
 
-      [MessageType.REQUEST]: async data => {
+      [REQUEST]: async data => {
         const response = {
           cid: data.cid
         };
 
         // receipt?
         if (data.receipt) {
-          response.type = MessageType.RECEIPT;
+          response.type = RECEIPT;
           engine.postMessage(response);
         }
 
@@ -39,23 +45,23 @@ class UnitWorkerEngine extends UnitBase {
         try {
           const { _calls } = this;
           // check arguments
-          data.payload = _calls.fromArguments(data.payload);
-          // execute and
+          data.args = _calls.fromArguments(data.args);
+          // call
           const result = await _calls.execute(data, this);
           // check result
-          response.result = _calls.toResult(result, data.target);
+          response.result = _calls.toResult(result);
         } catch (error) {
           response.error = error;
         }
 
         // response
-        response.type = MessageType.RESPONSE;
+        response.type = RESPONSE;
         engine.postMessage(response);
       },
 
-      [MessageType.RESPONSE]: data => this._calls.onresponse(data),
+      [RESPONSE]: data => this._calls.onresponse(data),
 
-      [MessageType.RECEIPT]: data => this._calls.onreceipt(data)
+      [RECEIPT]: data => this._calls.onreceipt(data)
     };
 
     // attach engine (worker or worker self instance)
@@ -64,20 +70,21 @@ class UnitWorkerEngine extends UnitBase {
     engine.onmessage = event => {
       const { data } = event;
       // is this our message?
-      if (data instanceof Object && data.type in _handlers)
+      if (data instanceof Object && data.type in _handlers) {
         return _handlers[data.type](data);
+      }
       // call standard listener
       // @ts-ignore
       this.onmessage instanceof Function && this.onmessage(event);
     };
 
-    // override dispatcher
+    // override
     this._dispatch = data => {
       switch (data.type) {
-        case MessageType.REQUEST:
+        case REQUEST:
           // post and
           return new Promise((resolve, reject) => {
-            const { name, options, _calls } = this;
+            const { options, _calls } = this;
             const c = {};
 
             // just in case no receiver
@@ -85,7 +92,7 @@ class UnitWorkerEngine extends UnitBase {
               const timeout = setTimeout(
                 () =>
                   c.onresponse({
-                    error: `Timeout on request ${data.method} in ${name}`
+                    error: `Timeout on request ${data.method} in ${data.target}`
                   }),
                 options.timeout
               );
@@ -102,20 +109,18 @@ class UnitWorkerEngine extends UnitBase {
               // remove call
               _calls.delete(data.cid);
               // promise's time
-              !error
-                ? resolve(_calls.fromResult(result))
-                : reject(new Error(error));
+              !error ? resolve(_calls.fromResult(result)) : reject(error);
             };
 
             // store call
             _calls.set(data.cid, c);
             // check arguments
-            data.payload = _calls.toArguments(data.payload);
+            data.args = _calls.toArguments(data.args);
             // and post
             engine.postMessage(data);
           });
 
-        case MessageType.EVENT:
+        case EVENT:
           // just post
           engine.postMessage(data);
       }
@@ -125,9 +130,9 @@ class UnitWorkerEngine extends UnitBase {
   // to self and back
   post(event, ...args) {
     return this._dispatch({
-      type: MessageType.EVENT,
+      type: EVENT,
       method: event,
-      payload: args
+      args
     });
   }
 }
@@ -151,6 +156,13 @@ export class UnitWorker extends UnitWorkerEngine {
     if (data.target) return this._redispatch(data);
     return super._oncall(data);
   }
+
+  _assign(name) {
+    super._assign(name);
+
+    // let worker self knows
+    this.post("_assign", name);
+  }
 }
 
 /**
@@ -159,5 +171,9 @@ export class UnitWorker extends UnitWorkerEngine {
 export class UnitWorkerSelf extends UnitWorkerEngine {
   constructor(engine = self) {
     super(engine);
+  }
+
+  on_assign(event) {
+    this._assign(...event.args);
   }
 }

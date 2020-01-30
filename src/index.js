@@ -14,7 +14,7 @@
 // TODO - split by files (100%)
 // TODO - add timeout for request (80%, if long calls failed?)
 // TODO - add transferable objects (80%, through proxies?)
-// TODO - add args and return proxies (80%, weakmap? events?)
+// TODO - add args and return proxies (80%, cleanup?)
 // TODO - add units dependency (0%)
 // TODO - add service worker support (0%)
 // TODO - add node.js support (0%)
