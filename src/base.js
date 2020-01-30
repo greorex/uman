@@ -57,31 +57,23 @@ export class UnitBase extends UnitObject {
 
   terminate() {}
 
-  post(event, payload) {
-    return this._dispatch({
-      type: MessageType.EVENT,
-      method: event,
-      payload
-    });
-  }
-
   _onevent(data) {
     const { method, payload, sender } = data;
     // do if exists
     // trick to have short 'on...'
     if (sender) {
-      // unit.units.sender.onmethod(payload)
+      // unit.units.sender.onmethod(...args)
       // priority #1
       const p = this.units[sender];
       if (p) {
         const m = `on${method}`;
-        if (m in p && p[m](payload)) return;
+        if (m in p && p[m](...payload)) return;
       }
 
-      // onsendermethod(payload)
+      // onsendermethod(...args)
       // priority #2
       const m = `on${sender}${method}`;
-      if (m in this && this[m](payload)) return;
+      if (m in this && this[m](...payload)) return;
     }
 
     // raw call 'onmethod(eventobject)'

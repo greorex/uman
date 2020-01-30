@@ -17,16 +17,16 @@ import { MessageType, TargetType } from "./enums";
  */
 class UnitsProxyTarget {
   constructor(unit, target) {
-    // 2. other.post(method, payload) -> to other
-    this.post = (method, payload) =>
+    // 2. other.post(method, ...args) -> to other
+    this.post = (method, ...args) =>
       unit._redispatch({
         type: MessageType.EVENT,
         target,
         method,
-        payload
+        payload: args
       });
     // 3. async other.method(...args) -> call other's method
-    // 4. set other.onevent(payload)
+    // 4. set other.onevent(...args)
     return new Proxy(this, {
       get: (t, prop, receiver) => {
         // if own asked, 'onmethod'
@@ -49,13 +49,13 @@ class UnitsProxyTarget {
  */
 export class UnitsProxy {
   constructor(unit) {
-    // 1. unit.units.post(method, payload) -> to all units
-    this.post = (method, payload) =>
+    // 1. unit.units.post(method, ...args) -> to all units
+    this.post = (method, ...args) =>
       unit._redispatch({
         type: MessageType.EVENT,
         target: TargetType.ALL,
         method,
-        payload
+        payload: args
       });
 
     // const other = unit.units.other;

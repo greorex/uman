@@ -94,11 +94,13 @@ export class UnitsManager extends Unit {
       unit = new UnitLazyLoader(value);
       unit._loaded = u => this._attachUnit(unit.name, u);
     }
+
     // default
     if (!unit) unit = value;
     // finaly unit has to be as
     if (!(unit instanceof UnitBase))
       throw new Error(`Wrong class of unit: ${name}`);
+
     // attach
     unit.name = name;
     unit._redispatch = data => {
@@ -106,8 +108,10 @@ export class UnitsManager extends Unit {
       data.sender = unit.name;
       return this._redispatch(data);
     };
-    // common call engine
+    // common
+    unit._listeners = this._listeners;
     unit._calls = this._calls;
+
     // update list
     this._units[name] = unit;
     return unit;

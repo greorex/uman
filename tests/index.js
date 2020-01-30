@@ -4,7 +4,7 @@ import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
 const testArray = [2, 3, 4, 5];
-const innerLog = false;
+const innerLog = true;
 
 const render = message => {
   const p = document.createElement("p");

@@ -115,15 +115,15 @@ Somewhere in your unit:
 async this.units.other.method(...args);
 
 // 2) to catch "event" from "other" unit:
-this.units.other.onevent = payload => {
+this.units.other.onevent = (...args) => {
   // do things
 };
 
 // 3) to post events:
 // to all units
-this.units.post("event", payload);
+this.units.post("event", ...args);
 // to "other" unit
-this.units.other.post("event", payload);
+this.units.other.post("event", ...args);
 ```
 
 <a name="unit_object"></a>

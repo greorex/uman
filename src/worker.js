@@ -121,6 +121,15 @@ class UnitWorkerEngine extends UnitBase {
       }
     };
   }
+
+  // to self and back
+  post(event, ...args) {
+    return this._dispatch({
+      type: MessageType.EVENT,
+      method: event,
+      payload: args
+    });
+  }
 }
 
 /**
