@@ -35,11 +35,9 @@ class UnitWorkerEngine extends UnitBase {
           cid: data.cid
         };
 
-        // receipt?
-        if (data.receipt) {
-          response.type = RECEIPT;
-          engine.postMessage(response);
-        }
+        // receipt
+        response.type = RECEIPT;
+        engine.postMessage(response);
 
         // call
         try {
@@ -84,24 +82,18 @@ class UnitWorkerEngine extends UnitBase {
         case REQUEST:
           // post and
           return new Promise((resolve, reject) => {
-            const { options, _calls } = this;
-            const c = {};
-
-            // just in case no receiver
-            if (options.timeout) {
-              const timeout = setTimeout(
-                () =>
-                  c.onresponse({
-                    error: `Timeout on request ${data.method} in ${data.target}`
-                  }),
-                options.timeout
-              );
-              c.onreceipt = () => clearTimeout(timeout);
-              data.receipt = true;
-            }
+            const { _calls } = this,
+              c = {};
 
             // next call id
             data.cid = _calls.next();
+            // store call
+            _calls.set(data.cid, c);
+            // check arguments
+            data.args = _calls.toArguments(data.args);
+
+            // post
+            engine.postMessage(data);
 
             // to restore call
             c.onresponse = ({ error, result = null }) => {
@@ -112,12 +104,21 @@ class UnitWorkerEngine extends UnitBase {
               !error ? resolve(_calls.fromResult(result)) : reject(error);
             };
 
-            // store call
-            _calls.set(data.cid, c);
-            // check arguments
-            data.args = _calls.toArguments(data.args);
-            // and post
-            engine.postMessage(data);
+            const { options } = this;
+
+            // just in case no receiver
+            if (options.timeout) {
+              const timeout = setTimeout(
+                () =>
+                  c.onresponse({
+                    error: `Timeout on request ${data.method} in ${data.target}`
+                  }),
+                options.timeout
+              );
+              c.onreceipt = () => {
+                timeout && clearTimeout(timeout);
+              };
+            }
           });
 
         case EVENT:

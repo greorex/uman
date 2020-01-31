@@ -20,8 +20,10 @@ const ALL = TargetType.ALL;
 /**
  * Units proxy target engine
  */
-class UnitsProxyTarget {
+export class UnitsProxyTarget {
   constructor(unit, target) {
+    this.target = target;
+
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
       unit._redispatch({

@@ -11,6 +11,7 @@
 // @ts-check
 
 import { MessageType } from "./enums";
+import { UnitOptionsDefault } from "./options";
 import { UnitObject } from "./object";
 import { UnitsProxy } from "./proxy";
 import { UnitCallsEngine } from "./calls";
@@ -18,13 +19,6 @@ import { UnitCallsEngine } from "./calls";
 // locals
 const EVENT = MessageType.EVENT;
 const REQUEST = MessageType.REQUEST;
-
-/**
- * default unit's options
- */
-export const UnitOptionsDefault = {
-  timeout: 0 //5000
-};
 
 /**
  * unit base call engine
@@ -52,6 +46,7 @@ export class UnitBase extends UnitObject {
         return (...args) =>
           receiver._dispatch({
             type: REQUEST,
+            target: receiver.name,
             method: prop,
             args
           });

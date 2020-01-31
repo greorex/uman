@@ -21,6 +21,11 @@ export default Unit.instance(
       return this.sum(cubes);
     }
 
+    // returns unit
+    testMisconception(object, one) {
+      return { object, one };
+    }
+
     OneObject() {
       return new OneObject();
     }

@@ -26,6 +26,16 @@ class Main extends UnitMain {
     this.units.post("log", event.args[0] + " received");
   }
 
+  async testMisconception(arr) {
+    const object = new TestsObject();
+    // try to pass UnitObject or Unit
+    const result = await this.units.tests.testMisconception(
+      { object, one: this.units.one },
+      arr
+    );
+    return result;
+  }
+
   TestsObject() {
     return new TestsObject();
   }
@@ -88,6 +98,11 @@ describe("runs all tests", () => {
 
   test("args and returns from worker", async () => {
     const result = await main.units.tests.testArgsReturns(testArray);
+    expect(result).toEqual("passed");
+  });
+
+  test("Misconception", async () => {
+    const result = await main.testMisconception(testArray);
     expect(result).toEqual("passed");
   });
 

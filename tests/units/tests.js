@@ -61,6 +61,23 @@ export default Unit.instance(
       return result === pureSum(arr) ? "passed" : "failed";
     }
 
+    async testMisconception({ object, one }, arr) {
+      let result;
+      // test UnitObject passed
+      result = await object.sum(arr);
+      if (result !== pureSum(arr)) return "failed";
+      // test unit one passe
+      result = await one.sum(arr);
+      if (result !== pureSum(arr)) return "failed";
+      // super test
+      result = await one.testMisconception(object, one);
+      if (!(result instanceof Object)) return "failed";
+      result = await result.one.sum(arr);
+      if (result !== pureSum(arr)) return "failed";
+
+      return "passed";
+    }
+
     TestsObject() {
       return new TestsObject();
     }

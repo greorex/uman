@@ -23,6 +23,7 @@
 // @ts-check
 
 export { MessageType, TargetType } from "./enums";
+export { UnitOptionsDefault } from "./options";
 export { UnitObject } from "./object";
 export { UnitWorker, UnitWorkerSelf } from "./worker";
 export { Unit } from "./unit";

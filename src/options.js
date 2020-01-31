@@ -11,19 +11,8 @@
 // @ts-check
 
 /**
- * message types enum
+ * default unit's options
  */
-export const MessageType = {
-  EVENT: "_e",
-  REQUEST: "_r",
-  RESPONSE: "_a",
-  RECEIPT: "_t"
-};
-
-/**
- * target types enum
- */
-export const TargetType = {
-  ALL: "all",
-  THIS: 0
+export const UnitOptionsDefault = {
+  timeout: 0 //5000
 };

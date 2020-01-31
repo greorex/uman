@@ -9,7 +9,7 @@ const innerLog = true;
 const render = message => {
   const p = document.createElement("p");
   if (message.startsWith("#")) p.style.fontWeight = "bold";
-  if (message.match(/failed|Error/)) p.style.color = "red";
+  if (message.match(/failed|Error|Timeout/)) p.style.color = "red";
   p.innerHTML = message;
   document.body.appendChild(p);
 };
@@ -41,9 +41,12 @@ class Main extends UnitMain {
       const t1 = performance.now();
       for (let i = times; i--; ) pureTest(arr);
       const t2 = performance.now();
-      render(`Repeated ${times} times. Avarage:`);
-      render(`- with = ${((t1 - t0) / times).toFixed(3)} ms`);
-      render(`- pure = ${((t2 - t1) / times).toFixed(3)} ms`);
+
+      const ams = d => (d / times).toFixed(3);
+      const d1 = ams(t1 - t0),
+        d2 = ams(t2 - t1);
+
+      render(`${times} times. Avarage = ${d1}, pure = ${d2} ms`);
     }
     return result;
   }
@@ -65,6 +68,16 @@ class Main extends UnitMain {
 
     const result = await oneObject.test({ testsObject, arr });
     return result === pureSum(arr) ? "passed" : "failed";
+  }
+
+  async testMisconception(arr) {
+    const object = new TestsObject();
+    // try to pass UnitObject or Unit
+    const result = await this.units.tests.testMisconception(
+      { object, one: this.units.one },
+      arr
+    );
+    return result;
   }
 
   TestsObject() {
@@ -148,6 +161,10 @@ test("Args and Returns", async () => {
 
 test("Args and Returns from worker", async () => {
   return await main.units.tests.testArgsReturns(testArray);
+});
+
+test("Misconception", async () => {
+  return await main.testMisconception(testArray);
 });
 
 test("Terminate", async () => {
