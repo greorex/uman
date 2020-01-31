@@ -101,7 +101,7 @@ describe("runs all tests", () => {
     expect(result).toEqual("passed");
   });
 
-  test("Misconception", async () => {
+  test("misconception", async () => {
     const result = await main.testMisconception(testArray);
     expect(result).toEqual("passed");
   });

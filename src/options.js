@@ -14,5 +14,5 @@
  * default unit's options
  */
 export const UnitOptionsDefault = {
-  timeout: 0 //5000
+  timeout: 5000
 };
