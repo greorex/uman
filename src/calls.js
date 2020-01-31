@@ -63,20 +63,15 @@ const UnitValue = {
     if (Array.isArray(args)) {
       for (let i = args.length; i--; ) {
         const a = args[i];
-        // as is
-        if (!(a instanceof Object) || Array.isArray(a)) continue;
-        // and object except
-        args[i] =
-          a instanceof UnitObjectProxy ||
-          a instanceof Function ||
-          a instanceof UnitObject ||
-          a instanceof UnitsProxyTarget ||
-          UnitValue.isReference(a)
-            ? f(a)
-            : UnitValue.mapArguments(a, f);
+        if (a instanceof Object && !Array.isArray(a))
+          // in place
+          args[i] = f(a);
       }
     } else if (args instanceof Object) {
-      for (let [key, a] of Object.entries(args)) args[key] = f(a);
+      for (let [key, a] of Object.entries(args))
+        if (a instanceof Object && !Array.isArray(a))
+          // in place
+          args[key] = f(a);
     }
 
     return args;
