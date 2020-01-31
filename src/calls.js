@@ -52,33 +52,6 @@ class UnitObjectProxy {
 }
 
 /**
- * value checker
- */
-const UnitValue = {
-  isReference: a =>
-    a instanceof Object && (a[OBJECT] || a[FUNCTION] || a[UNIT]),
-  // to pass to/from worker
-  mapArguments: (args, f) => {
-    // one level only
-    if (Array.isArray(args)) {
-      for (let i = args.length; i--; ) {
-        const a = args[i];
-        if (a instanceof Object && !Array.isArray(a))
-          // in place
-          args[i] = f(a);
-      }
-    } else if (args instanceof Object) {
-      for (let [key, a] of Object.entries(args))
-        if (a instanceof Object && !Array.isArray(a))
-          // in place
-          args[key] = f(a);
-    }
-
-    return args;
-  }
-};
-
-/**
  * engine to execute calls with built in cache
  */
 export class UnitCallsEngine extends Map {
@@ -151,33 +124,48 @@ export class UnitCallsEngine extends Map {
     c && c.onreceipt instanceof Function && c.onreceipt();
   }
 
+  mapArguments(args, f) {
+    // one level only
+    // array
+    if (Array.isArray(args)) {
+      return args.map(a =>
+        a instanceof Object && !Array.isArray(a) ? f(a) : a
+      );
+    }
+    // object
+    else if (args instanceof Object) {
+      const r = {};
+      for (let [key, a] of Object.entries(args))
+        r[key] = a instanceof Object && !Array.isArray(a) ? f(a) : a;
+      return r;
+    }
+    // as is
+    return args;
+  }
+
   toResult(r) {
     return r instanceof UnitObject
       ? this.cache(r, OBJECT)
       : r instanceof Function
       ? this.cache(r, FUNCTION)
-      : r instanceof UnitObjectProxy
-      ? r.reference
       : r instanceof UnitsProxyTarget
       ? { [UNIT]: r.target }
-      : Array.isArray(r) || r instanceof Object
-      ? this.toArguments(r)
-      : r;
+      : r instanceof UnitObjectProxy
+      ? r.reference
+      : this.toArguments(r);
   }
 
   fromResult(r) {
-    return UnitValue.isReference(r)
+    return r instanceof Object && (r[OBJECT] || r[FUNCTION] || r[UNIT])
       ? this.object(r)
-      : Array.isArray(r) || r instanceof Object
-      ? this.fromArguments(r)
-      : r;
+      : this.fromArguments(r);
   }
 
   toArguments(args) {
-    return UnitValue.mapArguments(args, a => this.toResult(a));
+    return this.mapArguments(args, a => this.toResult(a));
   }
 
   fromArguments(args) {
-    return UnitValue.mapArguments(args, a => this.fromResult(a));
+    return this.mapArguments(args, a => this.fromResult(a));
   }
 }
