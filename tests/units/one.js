@@ -23,6 +23,7 @@ export default Unit.instance(
 
     // returns unit
     testMisconception(object, one) {
+      this.units.post("testMisconception");
       return { object, one };
     }
 

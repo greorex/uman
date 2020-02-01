@@ -60,26 +60,19 @@ export class UnitsManager extends Unit {
 
     // override redispatcher
     this._redispatch = data => {
-      if (!data.sender) data.sender = this.name;
-
       const { target, sender } = data;
       switch (target) {
         case ALL:
           // to all except sender
           for (let [name, unit] of Object.entries(this._units))
-            if (
-              name !== sender &&
-              !(unit instanceof UnitLazyLoader) &&
-              unit instanceof UnitBase
-            )
+            if (name !== sender && !(unit instanceof UnitLazyLoader))
               unit._dispatch(data);
           return;
 
         default:
+          // to target, load if doesn't
           const unit = this._units[target];
-          if (unit instanceof UnitBase)
-            // load if doesn't
-            return unit._dispatch(data);
+          if (unit) return unit._dispatch(data);
       }
 
       // not a unit or wrong target
@@ -87,7 +80,7 @@ export class UnitsManager extends Unit {
     };
   }
 
-  _attachUnit(name, value) {
+  _attach(name, value) {
     let unit;
     // case lazy
     if (
@@ -96,7 +89,7 @@ export class UnitsManager extends Unit {
       value instanceof Promise
     ) {
       unit = new UnitLazyLoader(value);
-      unit._loaded = u => this._attachUnit(unit.name, u);
+      unit._loaded = u => this._attach(unit.name, u);
     }
 
     // default
@@ -106,15 +99,10 @@ export class UnitsManager extends Unit {
       throw new Error(`Wrong class of unit: ${name}`);
 
     // attach
-    unit._assign(name);
-    unit._redispatch = data => {
-      // from
-      data.sender = name;
-      // to all
-      return this._redispatch(data);
-    };
+    unit.init(name);
     // common
     unit._calls = this._calls;
+    unit._redispatch = data => this._redispatch(data);
 
     // update list
     this._units[name] = unit;
@@ -130,7 +118,7 @@ export class UnitsManager extends Unit {
       if (typeof name !== "string" || "post" === name)
         throw new Error(`Wrong unit name: ${name}`);
       // check unit
-      this._attachUnit(name, unit);
+      this._attach(name, unit);
     }
     return this;
   }

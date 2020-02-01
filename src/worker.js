@@ -45,7 +45,7 @@ class UnitWorkerEngine extends UnitBase {
           // check arguments
           data.args = _calls.fromArguments(data.args);
           // call
-          const result = await _calls.execute(data, this);
+          const result = await _calls._oncall(data, this);
           // check result
           response.result = _calls.toResult(result);
         } catch (error) {
@@ -96,12 +96,14 @@ class UnitWorkerEngine extends UnitBase {
             engine.postMessage(data);
 
             // to restore call
-            c.onresponse = ({ error, result = null }) => {
+            c.onresponse = response => {
               c.onreceipt instanceof Function && c.onreceipt();
               // remove call
-              _calls.delete(data.cid);
+              _calls.delete(response.cid);
               // promise's time
-              !error ? resolve(_calls.fromResult(result)) : reject(error);
+              !response.error
+                ? resolve(_calls.fromResult(response.result))
+                : reject(response.error);
             };
 
             const { options } = this;
@@ -158,11 +160,11 @@ export class UnitWorker extends UnitWorkerEngine {
     return super._oncall(data);
   }
 
-  _assign(name) {
-    super._assign(name);
+  init(name) {
+    super.init(name);
 
-    // let worker self knows
-    this.post("_assign", name);
+    // initialize worker self
+    this.post("init", name, this.options);
   }
 }
 
@@ -174,7 +176,9 @@ export class UnitWorkerSelf extends UnitWorkerEngine {
     super(engine);
   }
 
-  on_assign(event) {
-    this._assign(...event.args);
+  oninit(event) {
+    const [name, options] = event.args;
+    this.init(name);
+    this.options = { ...options };
   }
 }

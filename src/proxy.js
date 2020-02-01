@@ -21,14 +21,15 @@ const ALL = TargetType.ALL;
  * Units proxy target engine
  */
 export class UnitsProxyTarget {
-  constructor(unit, target) {
-    this.target = target;
+  constructor(handler, target) {
+    this._target = target;
 
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
-      unit._redispatch({
+      handler._redispatch({
         type: EVENT,
         target,
+        sender: handler.name,
         method,
         args
       });
@@ -40,7 +41,7 @@ export class UnitsProxyTarget {
         if (prop in t) return Reflect.get(t, prop, receiver);
         // request method
         return (...args) =>
-          unit._redispatch({
+          handler._redispatch({
             type: REQUEST,
             target,
             method: prop,
@@ -55,12 +56,13 @@ export class UnitsProxyTarget {
  * Units fast access to other units
  */
 export class UnitsProxy {
-  constructor(unit) {
+  constructor(handler) {
     // 1. unit.units.post(method, ...args) -> to all units
     this.post = (method, ...args) =>
-      unit._redispatch({
+      handler._redispatch({
         type: EVENT,
         target: ALL,
+        sender: handler.name,
         method,
         args
       });
@@ -71,7 +73,7 @@ export class UnitsProxy {
         let value = Reflect.get(t, prop, receiver);
         if (!value) {
           // asume "other" asked
-          value = new UnitsProxyTarget(unit, prop);
+          value = new UnitsProxyTarget(handler, prop);
           Reflect.set(t, prop, value, receiver);
         }
         return value;

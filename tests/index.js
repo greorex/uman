@@ -1,10 +1,11 @@
-import { UnitMain, UnitWorker, UnitObject } from "uman";
+import { UnitMain, UnitWorker, UnitObject, UnitOptionsDefault } from "uman";
 
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
+UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
@@ -72,6 +73,9 @@ class Main extends UnitMain {
 
   async testMisconception(arr) {
     const object = new TestsObject();
+    this.units.one.ontestMisconception = () => {
+      this.units.post("log", "main.units.one.ontestMisconception");
+    };
     // try to pass UnitObject or Unit
     const result = await this.units.tests.testMisconception(
       { object, one: this.units.one },

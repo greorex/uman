@@ -26,8 +26,8 @@ const UNIT = "_u";
  * object proxy
  */
 class UnitObjectProxy {
-  constructor(reference, unit) {
-    this.reference = reference;
+  constructor(reference, handler) {
+    this._reference = reference;
 
     // no then function
     // if promise check
@@ -39,7 +39,7 @@ class UnitObjectProxy {
         if (prop in t) return Reflect.get(t, prop, receiver);
         // unit knows
         return (...args) =>
-          unit._redispatch({
+          handler._redispatch({
             type: REQUEST,
             target: reference.owner,
             reference,
@@ -58,8 +58,11 @@ export class UnitCallsEngine extends Map {
   constructor(handler) {
     super();
 
-    this._unit = handler;
     this._n = 0; // next key
+
+    // redispatcher
+    this._handler = handler;
+    this._redispatch = data => handler._redispatch(data);
   }
 
   next() {
@@ -67,7 +70,7 @@ export class UnitCallsEngine extends Map {
   }
 
   cache(handler, type) {
-    const owner = this._unit.name,
+    const owner = this._handler.name,
       id = this.next();
     this.set(id, handler);
     // reference
@@ -78,11 +81,11 @@ export class UnitCallsEngine extends Map {
   }
 
   object(reference) {
-    if (reference[UNIT]) return this._unit.units[reference[UNIT]];
-    if (reference[OBJECT]) return new UnitObjectProxy(reference, this._unit);
+    if (reference[UNIT]) return this._handler.units[reference[UNIT]];
+    if (reference[OBJECT]) return new UnitObjectProxy(reference, this);
     if (reference[FUNCTION])
       return (...args) => {
-        this._unit._redispatch({
+        this._redispatch({
           type: REQUEST,
           target: reference.owner,
           reference,
@@ -91,10 +94,10 @@ export class UnitCallsEngine extends Map {
       };
   }
 
-  execute(data, handler) {
+  _oncall(data, handler) {
     const { reference } = data;
     // default
-    if (!(reference && reference.owner === this._unit.name))
+    if (!(reference && reference.owner === this._handler.name))
       return handler._oncall(data);
     // object's
     if (reference[OBJECT]) {
@@ -149,9 +152,9 @@ export class UnitCallsEngine extends Map {
       : r instanceof Function
       ? this.cache(r, FUNCTION)
       : r instanceof UnitsProxyTarget
-      ? { [UNIT]: r.target }
+      ? { [UNIT]: r._target }
       : r instanceof UnitObjectProxy
-      ? r.reference
+      ? r._reference
       : this.toArguments(r);
   }
 

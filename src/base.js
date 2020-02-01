@@ -29,13 +29,13 @@ export class UnitBase extends UnitObject {
 
     this.options = { ...UnitOptionsDefault };
 
-    // call engine
-    this._calls = new UnitCallsEngine(this);
-
     // manager engine
     this.name = "";
     this.units = new UnitsProxy(this);
     this._redispatch = data => this._dispatch(data);
+
+    // call engine
+    this._calls = new UnitCallsEngine(this);
 
     // proxy engine
     return new Proxy(this, {
@@ -54,7 +54,7 @@ export class UnitBase extends UnitObject {
     });
   }
 
-  _assign(name) {
+  init(name) {
     this.name = name;
   }
 
@@ -88,7 +88,7 @@ export class UnitBase extends UnitObject {
   _dispatch(data) {
     switch (data.type) {
       case REQUEST:
-        return this._calls.execute(data, this);
+        return this._calls._oncall(data, this);
 
       case EVENT:
         this._onevent(data);

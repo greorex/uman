@@ -66,7 +66,13 @@ export default Unit.instance(
       // test UnitObject passed
       result = await object.sum(arr);
       if (result !== pureSum(arr)) return "failed";
-      // test unit one passe
+      this.units.one.oneontestMisconception = () => {
+        this.units.post("log", "tests.units.one.ontestMisconception");
+      };
+      // test unit one passed from main
+      one.ontestMisconception = () => {
+        this.units.post("log", "one.ontestMisconception");
+      };
       result = await one.sum(arr);
       if (result !== pureSum(arr)) return "failed";
       // super test
