@@ -10,32 +10,9 @@
 
 // @ts-check
 
+import { UnitEventEmitter } from "./emitter";
+
 /**
- * unit object base, event emitter
+ * to export objects with functionality from unit
  */
-export class UnitObject {
-  constructor() {
-    this._listeners = {};
-  }
-
-  on(event, f) {
-    if (!(f instanceof Function))
-      throw new Error(`Wrong type of listener for ${event}`);
-    let el = this._listeners[event];
-    if (!el) el = this._listeners[event] = [];
-    el.push(f);
-    return this;
-  }
-
-  off(event, f) {
-    const el = this._listeners[event];
-    if (el) this._listeners[event] = el.filter(i => i !== f);
-    return this;
-  }
-
-  fire(event, ...args) {
-    const el = this._listeners[event];
-    if (el) el.every(f => f(...args));
-    return this;
-  }
-}
+export class UnitObject extends UnitEventEmitter {}

@@ -14,6 +14,7 @@ import { MessageType } from "./enums";
 import { UnitOptionsDefault } from "./options";
 import { UnitsProxy } from "./proxy";
 import { UnitCallsEngine } from "./calls";
+import { UnitEventEmitter } from "./emitter";
 
 // locals
 const EVENT = MessageType.EVENT;
@@ -22,8 +23,10 @@ const REQUEST = MessageType.REQUEST;
 /**
  * unit base call engine
  */
-export class UnitBase {
+export class UnitBase extends UnitEventEmitter {
   constructor() {
+    super();
+
     this.options = { ...UnitOptionsDefault };
 
     // manager engine
@@ -57,27 +60,17 @@ export class UnitBase {
 
   _onevent(data) {
     const { method, args, sender } = data;
-    // do if exists
-    // trick to have short 'on...'
-    if (sender) {
-      // unit.units.sender.onmethod(...args)
-      // priority #1
+    // new routine
+    if (!sender)
+      // sibscribers of this
+      this.fire(method, ...args);
+    else {
       const p = this.units[sender];
-      if (p) {
-        const m = `on${method}`;
-        if (m in p && p[m](...args)) return;
-      }
-
-      // onsendermethod(...args)
-      // priority #2
-      const m = `on${sender}${method}`;
-      if (m in this && this[m](...args)) return;
+      // sibscribers of sender
+      if (p) p.fire(method, ...args);
+      // sibscribers of units
+      this.units.fire(method, sender, ...args);
     }
-
-    // raw call 'onmethod(eventobject)'
-    // priority #3
-    const m = `on${method}`;
-    m in this && this[m](data);
   }
 
   _oncall(data) {

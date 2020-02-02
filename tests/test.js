@@ -18,12 +18,18 @@ class TestsObject extends UnitObject {
 
 // main class to run app
 class Main extends UnitMain {
+  constructor() {
+    super();
+
+    this.units.on("testEvents", (sender, ...args) => {
+      this.units.post(
+        "log",
+        `${args[0]} received from ${sender} by ${this.name}`
+      );
+    });
+  }
   async run(arr) {
     return await this.units.tests.run(arr);
-  }
-
-  ontestEvents(event) {
-    this.units.post("log", event.args[0] + " received");
   }
 
   async testMisconception(arr) {
@@ -70,7 +76,7 @@ describe("runs all tests", () => {
     // but call proxied
     const result = await main.units.tests.pureTest(testArray);
     // post event
-    main.units.post("testEvents", "main.units.post -> event sent");
+    main.units.post("testEvents", "units.post -> event sent");
     expect(result).toEqual("passed");
   });
 

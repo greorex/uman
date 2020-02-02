@@ -29,43 +29,51 @@ class UnitWorkerEngine extends UnitBase {
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
-    engine.onmessage = event => {
+    engine.onmessage = async event => {
       const { data } = event;
       // is this our message?
       switch (data instanceof Object && data.type) {
-        case EVENT:
-          return this._onevent(data);
+        case EVENT: {
+          this._onevent(data);
+          return;
+        }
 
-        case REQUEST:
-          return (async () => {
-            const response = {
-              cid: data.cid
-            };
-            // receipt
-            response.type = RECEIPT;
-            engine.postMessage(response);
+        case REQUEST: {
+          const response = {
+            cid: data.cid
+          };
+          // receipt
+          response.type = RECEIPT;
+          engine.postMessage(response);
+          // call
+          try {
+            const { _calls } = this;
+            // check arguments
+            data.args = _calls.fromArguments(data.args);
             // call
-            try {
-              const { _calls } = this;
-              // check arguments
-              data.args = _calls.fromArguments(data.args);
-              // call
-              const result = await _calls._oncall(data, this);
-              // check result
-              response.result = _calls.toResult(result);
-            } catch (error) {
-              response.error = error;
-            }
-            // response
-            response.type = RESPONSE;
-            engine.postMessage(response);
-          })();
+            const result = await _calls._oncall(data, this);
+            // check result
+            response.result = _calls.toResult(result);
+          } catch (error) {
+            response.error = error;
+          }
+          // response
+          response.type = RESPONSE;
+          engine.postMessage(response);
+          return;
+        }
 
-        case RESPONSE:
-          return this._calls.onresponse(data);
+        case RESPONSE: {
+          const c = this._calls.get(data.cid);
+          c && c.onresponse(data);
+          return;
+        }
 
-        case RECEIPT:
-          return this._calls.onreceipt(data);
+        case RECEIPT: {
+          const c = this._calls.get(data.cid);
+          c && c.onreceipt instanceof Function && c.onreceipt();
+          return;
+        }
       }
 
       // call standard listener

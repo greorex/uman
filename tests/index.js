@@ -5,7 +5,8 @@ import { pureTest, pureSum } from "./pure";
 
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
-UnitOptionsDefault.timeout = 0;
+const times = 1000;
+// UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
@@ -27,16 +28,19 @@ class Main extends UnitMain {
   constructor() {
     super();
 
-    this.units.tests.onlog = message => render(message);
+    this.units.tests.on("log", message => render(message));
+
+    this.units.on("testEvents", (sender, ...args) => {
+      render(`${args[0]} received from ${sender} by ${this.name}`);
+    });
   }
 
   async test(arr) {
     let result = await this.units.tests.run(arr);
 
-    this.units.post("testEvents", "main.units.post -> event sent");
+    this.units.post("testEvents", "units.post -> event sent");
 
     if (result === "passed") {
-      const times = 1000;
       const t0 = performance.now();
       for (let i = times; i--; ) await this.units.tests.pureTest(arr);
       const t1 = performance.now();
@@ -52,13 +56,10 @@ class Main extends UnitMain {
     return result;
   }
 
-  ontestEvents(event) {
-    render(event.args[0] + " received");
-  }
-
   async testArgsReturns(arr) {
     const testsObject = await this.units.tests.TestsObject();
-    testsObject.on("sum", arr => {
+
+    const unsibscribe = await testsObject.on("sum", arr => {
       this.units.post("log", "callback: testsObject.onsum " + arr);
     });
 
@@ -68,14 +69,17 @@ class Main extends UnitMain {
     });
 
     const result = await oneObject.test({ testsObject, arr });
+
+    unsibscribe();
+
     return result === pureSum(arr) ? "passed" : "failed";
   }
 
   async testMisconception(arr) {
     const object = new TestsObject();
-    this.units.one.ontestMisconception = () => {
+    this.units.one.on("testMisconception", () => {
       this.units.post("log", "main.units.one.ontestMisconception");
-    };
+    });
     // try to pass UnitObject or Unit
     const result = await this.units.tests.testMisconception(
       { object, one: this.units.one },
@@ -139,12 +143,15 @@ test("No Manager", async () => {
     sum(arr) {
       return pureSum(arr);
     }
-    onnoManagerTest(event) {
-      render(event.args[0] + " received");
-    }
   }
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
+
+  await unit.init();
+
+  unit.on("noManagerTest", (...args) => {
+    render(`${args[0]}  received`);
+  });
 
   unit.post("noManagerTest", "unit -> event sent");
 

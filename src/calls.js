@@ -58,15 +58,15 @@ export class UnitCallsEngine extends Map {
   constructor(handler) {
     super();
 
-    this._n = 0; // next key
+    // private
+    let _n = 0;
+
+    // next key
+    this.next = () => ++_n;
 
     // redispatcher
     this._handler = handler;
     this._redispatch = data => handler._redispatch(data);
-  }
-
-  next() {
-    return ++this._n;
   }
 
   cache(handler, type) {
@@ -114,16 +114,6 @@ export class UnitCallsEngine extends Map {
         throw new Error(`Wrong function reference in ${reference.owner}`);
       return f(...data.args);
     }
-  }
-
-  onresponse(data) {
-    const c = this.get(data.cid);
-    c && c.onresponse(data);
-  }
-
-  onreceipt(data) {
-    const c = this.get(data.cid);
-    c && c.onreceipt instanceof Function && c.onreceipt();
   }
 
   mapArguments(args, f) {

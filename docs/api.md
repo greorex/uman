@@ -22,20 +22,20 @@ Special:
 
 Class to create manager.
 
-```javascript
+```typescript
 UnitsManager(units: Object like {
   // 1) created unit
   name: new Unit(),
   // 2) unit will be created on demand
   name: () => new Unit(),
   // 3) unit will be run on demand as web worker
-  name: () => new Worker(url, options);
+  name: () => new Worker(url: string, options: any);
   // 4) unit will be imported on demand
   name: () => import('pathto/unit.js');
-})
+});
 
 // to add other units
-add(units: see constructor) : UnitsManager
+add(units: see constructor)
 
 // to terminate unit
 terminate(name?: string) // all by default
@@ -53,21 +53,34 @@ Unit();
 
 Please follow the syntax to have the unit as an universal module:
 
-```javascript
+```typescript
 export default Unit.instance(
   class extends Unit {
     // your ES6+ code
-    method(...args) {
+    method(...args: any) {
       // do things
       return something;
     }
-    // may be async
-    async method(...args) {
+    // may be asynchronous
+    async method(...args: any) {
       // do things
       return await something(...args);
     }
   }
 );
+```
+
+You may override these methods:
+
+```javascript
+async init() {
+  // to initialize unit
+  await loading ...
+}
+
+terminate() {
+  // to finalize unit
+}
 ```
 
 The class will be automatically instantiated if it's used as a script part of web worker unit.
@@ -110,35 +123,52 @@ units: Object;
 
 Somewhere in your unit:
 
-```javascript
+```typescript
 // 1) to call "method" of "other" unit:
-async this.units.other.method(...args);
+await this.units.other.method(...args: any);
 
-// 2) to catch "event" from "other" unit:
-this.units.other.onevent = (...args) => {
+// 2) to catch "event" from all units
+this.units.on(event: string, (sender: string, ...args: any) => {
   // do things
-};
+});
 
-// 3) to post events:
-// to all units
-this.units.post("event", ...args);
+// 3) to catch "event" from "other" unit:
+this.units.other.on(event: string, (...args: any) => {
+  // do things
+});
+
+// 4) to post events:
+// to all units, this will be "sender"
+this.units.post(event: string, ...args: any);
 // to "other" unit
-this.units.other.post("event", ...args);
+this.units.other.post(event: string, ...args: any);
 ```
 
 <a name="unit_object"></a>
 
 ### UnitObject
 
-If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. In that case the unit may be as a class factory.
+If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. In that case the unit may be as a class factory, while the object will be as interface to access it's methods.
 
 > Note, there is no [units](#units) property in _UnitObject_.
 
-Technically, the object will live in the unit's thread but you may call it's methods from other threads to do things.
+The object is event emitter and you may subscribe on events fired by it:
+
+```typescript
+on(event: string, callback: (...args: any) => {
+  // do things
+}) // returns off function
+
+fire(event: string, ...args: any);
+```
+
+Technically, the object will live in the unit's thread but you may call it's methods from other threads.
+
+For example:
 
 `./units/unit.js`
 
-```javascript
+```typescript
 class MyObject extends UnitObject {
   constructor(...args) {
     super();
@@ -146,6 +176,8 @@ class MyObject extends UnitObject {
   }
   method(...args) {
     // do things
+    // fire event
+    this.fire("event", ...args);
     return something;
   }
   // can be async
@@ -165,10 +197,16 @@ export default Unit.instance(
 
 Somewhere in your unit:
 
-```javascript
+```typescript
 // call "unit" to create objects
 const object1 = this.units.unit.MyObject(...args);
 const object2 = this.units.unit.MyObject(...args);
+
+// subscribe to catch event
+const off = object2.on("event", (...args) => {
+  // do things
+});
+
 // do things
 const result1 = object1.method(...args);
 const result2 = object2.method(...args);
@@ -176,7 +214,12 @@ const result2 = object2.method(...args);
 const object3 = this.units.other.method(object1, ...args);
 // or
 const result3 = object3.method({ object2, ...args });
+
+// unsubscribe
+off();
 ```
+
+Don't forget to use async/await if you have to wait the result. Otherwise it would be a _Promise_.
 
 ## License
 

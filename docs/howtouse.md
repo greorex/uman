@@ -98,9 +98,12 @@ import { Unit } from "uman";
 
 export default Unit.instance(
   class extends Unit {
-    // to catch "log" events from all units
-    onlog(event) {
-      console.log(event.sender + ": " + event.payload);
+    constructor() {
+      super();
+      // to catch "log" events from all units
+      this.units.on("log", (sender, message) => {
+        console.log(sender + ": " + message);
+      }
     }
   }
 );
@@ -121,7 +124,7 @@ class Main extends UnitMain {
     super();
 
     // to catch event "log" from unit "tests"
-    this.units.tests.onlog = message => this.render(message);
+    this.units.tests.on("log", message => this.render(message));
   }
 
   async run(arr) {
@@ -155,7 +158,7 @@ main.add({
 });
 
 // run
-main.run([2, 3, 4]);
+await main.run([2, 3, 4]);
 ```
 
 Thats all.

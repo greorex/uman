@@ -24,7 +24,7 @@ _Javascript_ is single threaded. The browser freezes UI and other operations if 
 
 The best choice is _web workers_ to run the code in background threads independently from the main thread. This also gives you pure multithreading approach.
 
-To start code with _web worker_ you type the following:
+To start code with _web worker_ you usually do the following:
 
 `main.js`
 
