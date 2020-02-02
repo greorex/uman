@@ -24,7 +24,7 @@ _Javascript_ is single threaded. The browser freezes UI and other operations if 
 
 The best choice is _web workers_ to run the code in background threads independently from the main thread. This also gives you pure multithreading approach.
 
-To start code with _web worker_ you type the following:
+To start code with _web worker_ you usually do the following:
 
 `main.js`
 
@@ -51,37 +51,37 @@ onmessage(message) {
 
 It looks nice for a task.
 
-But what if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to avoid code duplication?
+But what if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to pass an object with methods to worker or back? How to avoid code duplication?
 
 With the _Uman_ everything is as simple as if you code in asynchronous way:
 
 `index.js`
 
 ```javascript
-// set up units
-const uman = UnitsManager({
-  main: () => import("main.js"),
-  // as a worker thread
-  one: () => new Worker("one.js"),
-  two: () => new Worker("two.js"),
-  // ...
-  // as a main thread
-  ten: () => import("ten.js")
-});
-
-uman.units.main.run();
-```
-
-`main.js`
-
-```javascript
-export default class extends Unit {
+class Main extends UnitMain {
   async run() {
     // ask worker "one" to do things
     const result = await this.units.one.task(...args);
     // do things with result
   }
 }
+
+const main = new Main();
+
+// set up units
+main.add({
+  // as a worker thread
+  // with lazy loading
+  one: () => new Worker("one.js"),
+  two: () => new Worker("two.js"),
+  // ...
+  // as a main thread
+  // with lazy loading
+  ten: () => import("ten.js")
+});
+
+// do
+main.run();
 ```
 
 `one.js`

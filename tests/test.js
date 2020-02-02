@@ -1,9 +1,9 @@
-import { UnitsManager, Unit, UnitObject } from "uman";
+import { UnitMain, UnitsManager, UnitObject } from "uman";
 import { pureSum } from "./pure";
 import Log from "./units/log";
 
 const testArray = [2, 3, 4];
-const innerLog = false;
+const innerLog = true;
 
 const logLoader = innerLog ? new Log() : () => new Log();
 
@@ -11,86 +11,115 @@ if (!global.Worker) global.Worker = class Worker {};
 
 class TestsObject extends UnitObject {
   sum(arr) {
+    this.fire("sum", arr);
     return pureSum(arr);
   }
 }
 
 // main class to run app
-class MainUnit extends Unit {
+class Main extends UnitMain {
+  constructor() {
+    super();
+
+    this.units.on("testEvents", (sender, ...args) => {
+      this.units.post(
+        "log",
+        `${args[0]} received from ${sender} by ${this.name}`
+      );
+    });
+  }
   async run(arr) {
     return await this.units.tests.run(arr);
   }
 
-  newObject() {
+  async testMisconception(arr) {
+    const object = new TestsObject();
+    // try to pass UnitObject or Unit
+    const result = await this.units.tests.testMisconception(
+      { object, one: this.units.one },
+      arr
+    );
+    return result;
+  }
+
+  TestsObject() {
     return new TestsObject();
   }
 }
 
 describe("runs all tests", () => {
-  let uman;
+  let main;
 
   beforeAll(() => {
-    uman = new UnitsManager();
+    main = new Main();
   });
 
-  test("units manager created", () => {
-    expect(uman).toBeInstanceOf(UnitsManager);
-  });
-
-  test("main unit added", () => {
-    uman.addUnits({
-      main: new MainUnit()
-    });
+  test("main unit created", () => {
+    expect(main).toBeInstanceOf(UnitsManager);
     // check real list
-    expect(Object.keys(uman._units).length).toEqual(1);
-    expect(uman._units.main).toBeInstanceOf(MainUnit);
+    expect(Object.keys(main._units).length).toEqual(1);
+    expect(main._units.main).toBeInstanceOf(Main);
   });
 
   test("all other units added", () => {
-    uman.addUnits({
+    main.add({
       one: () => import("./units/one"),
       two: () => import("./units/two"),
       tests: () => import("./units/tests"),
       log: logLoader
     });
     // check real list
-    expect(Object.keys(uman._units).length).toEqual(5);
+    expect(Object.keys(main._units).length).toEqual(5);
   });
 
-  test("method accessed with direct call", async () => {
-    // check real list
-    expect(uman._units.tests).toBeInstanceOf(UnitObject);
+  test("methods and events", async () => {
     // but call proxied
-    const result = await uman.units.tests.pureTest(testArray);
+    const result = await main.units.tests.pureTest(testArray);
+    // post event
+    main.units.post("testEvents", "units.post -> event sent");
     expect(result).toEqual("passed");
   });
 
   test("inner tests passed", async () => {
-    const result = await uman.units.main.run(testArray);
+    const result = await main.run(testArray);
     expect(result).toEqual("passed");
   });
 
   test("args and returns", async () => {
-    const testsObject = await uman.units.tests.newObject();
-    const oneObject = await uman.units.one.newObject();
+    const testsObject = await main.units.tests.TestsObject();
+    testsObject.on("sum", arr => {
+      main.units.post("log", "callback: testsObject.onsum " + arr);
+    });
+
+    const oneObject = await main.units.one.OneObject();
+    oneObject.on("test", () => {
+      main.units.post("log", "callback: oneObject.ontest");
+    });
+
     const result = await oneObject.test({ testsObject, arr: testArray });
     expect(result).toEqual(pureSum(testArray));
   });
 
   test("args and returns from worker", async () => {
-    const result = await uman.units.tests.testArgsReturns(testArray);
+    const result = await main.units.tests.testArgsReturns(testArray);
     expect(result).toEqual("passed");
   });
 
-  test("unit 'tests' deleted", () => {
-    uman.deleteUnit("tests");
-    // check real list
-    expect(Object.keys(uman._units).length).toEqual(4);
+  test("misconception", async () => {
+    const result = await main.testMisconception(testArray);
+    expect(result).toEqual("passed");
   });
 
-  test("all other units deleted", () => {
-    uman.deleteAll();
+  test("unit 'tests' terminated", () => {
+    main.terminate("tests");
     // check real list
-    expect(Object.keys(uman._units).length).toEqual(0);
+    expect(Object.keys(main._units).length).toEqual(4);
+  });
+
+  test("all other units terminated", () => {
+    main.terminate();
+    // check real list
+    expect(Object.keys(main._units).length).toEqual(1);
+    expect(main._units.main).toBeInstanceOf(Main);
   });
 });

@@ -1,71 +1,106 @@
-import { UnitsManager, UnitWorker, Unit, UnitObject } from "uman";
+import { UnitMain, UnitWorker, UnitObject, UnitOptionsDefault } from "uman";
 
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
 const testArray = [2, 3, 4, 5];
-const innerLog = false;
+const innerLog = true;
+const times = 1000;
+// UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
+  if (message.startsWith("#")) p.style.fontWeight = "bold";
+  if (message.match(/failed|Error|Timeout/)) p.style.color = "red";
   p.innerHTML = message;
   document.body.appendChild(p);
 };
 
 class TestsObject extends UnitObject {
   sum(arr) {
+    this.fire("sum", arr);
     return pureSum(arr);
   }
 }
 
 // main class to run app
-class MainUnit extends Unit {
+class Main extends UnitMain {
   constructor() {
     super();
 
-    this.units.tests.onlog = message => render(message);
+    this.units.tests.on("log", message => render(message));
+
+    this.units.on("testEvents", (sender, ...args) => {
+      render(`${args[0]} received from ${sender} by ${this.name}`);
+    });
   }
 
   async test(arr) {
     let result = await this.units.tests.run(arr);
+
+    this.units.post("testEvents", "units.post -> event sent");
+
     if (result === "passed") {
       const t0 = performance.now();
-      result = await this.units.tests.pureTest(arr);
+      for (let i = times; i--; ) await this.units.tests.pureTest(arr);
       const t1 = performance.now();
-      pureTest(arr);
+      for (let i = times; i--; ) pureTest(arr);
       const t2 = performance.now();
-      render("Time: " + (t1 - t0).toFixed(3) + " ms");
-      render("Pure: " + (t2 - t1).toFixed(3) + " ms");
+
+      const ams = d => (d / times).toFixed(3);
+      const d1 = ams(t1 - t0),
+        d2 = ams(t2 - t1);
+
+      render(`${times} times. Avarage = ${d1}, pure = ${d2} ms`);
     }
     return result;
   }
 
-  ondirectPostTest(event) {
-    render(event.payload + " received");
-  }
-
   async testArgsReturns(arr) {
-    const testsObject = await this.units.tests.newObject();
-    const oneObject = await this.units.one.newObject();
+    const testsObject = await this.units.tests.TestsObject();
+
+    const unsibscribe = await testsObject.on("sum", arr => {
+      this.units.post("log", "callback: testsObject.onsum " + arr);
+    });
+
+    const oneObject = await this.units.one.OneObject();
+    oneObject.on("test", () => {
+      this.units.post("log", "callback: oneObject.ontest");
+    });
+
     const result = await oneObject.test({ testsObject, arr });
+
+    unsibscribe();
+
     return result === pureSum(arr) ? "passed" : "failed";
   }
 
-  newObject() {
+  async testMisconception(arr) {
+    const object = new TestsObject();
+    this.units.one.on("testMisconception", () => {
+      this.units.post("log", "main.units.one.ontestMisconception");
+    });
+    // try to pass UnitObject or Unit
+    const result = await this.units.tests.testMisconception(
+      { object, one: this.units.one },
+      arr
+    );
+    return result;
+  }
+
+  TestsObject() {
     return new TestsObject();
   }
 }
 
-// add main unit
-const uman = new UnitsManager({
-  // instance
-  main: new MainUnit()
-});
+// main unit
+const main = new Main();
 
 // add units
-uman.addUnits({
+main.add({
   // worker thread
   one: new Worker("./units/one.js", { type: "module" }),
+  // one: () => import("./units/one"),
   // lazy import
   two: import("./units/two"),
   // other worker thread on demand
@@ -90,7 +125,7 @@ class TestEngine {
 
   async run() {
     for (let item of this.cases) {
-      render("+ " + item.name);
+      render("# " + item.name);
       try {
         render("Test " + (await item.func()));
       } catch (error) {
@@ -103,17 +138,20 @@ class TestEngine {
 const te = new TestEngine();
 const test = (...args) => te.test(...args);
 
-test("Worker Engine", async () => {
+test("No Manager", async () => {
   class TestUnit extends UnitWorker {
     sum(arr) {
       return pureSum(arr);
     }
-    onnoManagerTest(event) {
-      render(event.payload + " received");
-    }
   }
 
   const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
+
+  await unit.init();
+
+  unit.on("noManagerTest", (...args) => {
+    render(`${args[0]}  received`);
+  });
 
   unit.post("noManagerTest", "unit -> event sent");
 
@@ -124,17 +162,26 @@ test("Worker Engine", async () => {
   return result;
 });
 
-test("Direct Call", async () => {
-  uman.units.post("directPostTest", "uman.units.post -> event sent");
-  return await uman.units.tests.pureTest(testArray);
-});
-
 test("Units Manager", async () => {
-  return await uman.units.main.test(testArray);
+  return await main.test(testArray);
 });
 
 test("Args and Returns", async () => {
-  return await uman.units.main.testArgsReturns(testArray);
+  return await main.testArgsReturns(testArray);
+});
+
+test("Args and Returns from worker", async () => {
+  return await main.units.tests.testArgsReturns(testArray);
+});
+
+test("Misconception", async () => {
+  return await main.testMisconception(testArray);
+});
+
+test("Terminate", async () => {
+  main.terminate();
+  // check real list
+  return 1 === Object.keys(main._units).length ? "passed" : "failed";
 });
 
 test("Args and Returns from worker", async () => {

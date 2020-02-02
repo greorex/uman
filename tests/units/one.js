@@ -2,6 +2,7 @@ import { Unit, UnitObject } from "uman";
 
 class OneObject extends UnitObject {
   async test({ testsObject, arr }) {
+    this.fire("test");
     return await testsObject.sum(arr);
   }
 }
@@ -20,7 +21,13 @@ export default Unit.instance(
       return this.sum(cubes);
     }
 
-    newObject() {
+    // returns unit
+    testMisconception(object, one) {
+      this.units.post("testMisconception");
+      return { object, one };
+    }
+
+    OneObject() {
       return new OneObject();
     }
   }
