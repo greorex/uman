@@ -22,26 +22,32 @@ const ALL = TargetType.ALL;
  * lazy loader engine
  */
 class UnitLazyLoader extends UnitBase {
-  constructor(value) {
+  constructor(loader) {
     super();
 
-    this._loaded = unit => unit;
     // resolve it later
+    this._resolved = unit => unit;
     this._dispatch = async data => {
+      let unit = loader;
       // case function
-      if (value instanceof Function) value = value();
+      if (unit instanceof Function) unit = unit();
       // case worker
-      if (value instanceof Worker) value = new UnitWorker(value);
+      if (unit instanceof Worker) unit = new UnitWorker(unit);
       // case promise
-      if (value instanceof Promise) {
-        value = await value.then();
+      if (unit instanceof Promise) {
+        const m = await unit.then();
         // may be as 'export default class'
-        if (value.default instanceof Function) value = new value.default();
+        if (m.default instanceof Function) unit = new m.default();
       }
+      // finaly unit has to be as
+      if (!(unit instanceof UnitBase))
+        throw new Error(`Wrong class of unit: ${this.name}`);
       // reatach
-      value = this._loaded(value);
+      this._resolved(unit);
+      // initialize
+      await unit.init();
       // call proper method
-      return value._dispatch(data);
+      return unit._dispatch(data);
     };
   }
 }
@@ -80,66 +86,48 @@ export class UnitsManager extends Unit {
     };
   }
 
-  _attach(name, value) {
-    let unit;
-    // case lazy
-    if (
-      value instanceof Function ||
-      value instanceof Worker ||
-      value instanceof Promise
-    ) {
-      unit = new UnitLazyLoader(value);
-      unit._loaded = u => this._attach(unit.name, u);
-    }
-
-    // default
-    if (!unit) unit = value;
-    // finaly unit has to be as
-    if (!(unit instanceof UnitBase))
-      throw new Error(`Wrong class of unit: ${name}`);
-
+  _attach(name, unit) {
     // attach
-    unit.init(name);
+    unit.name = name;
     // common
+    // @ts-ignore
     unit._calls = this._calls;
     unit._redispatch = data => this._redispatch(data);
-
     // update list
     this._units[name] = unit;
-
-    return unit;
   }
 
   add(units) {
-    for (let [name, unit] of Object.entries(units)) {
+    for (let [name, loader] of Object.entries(units)) {
       // check duplication
-      if (this._units[name]) throw new Error(`Unit ${unit} already exists`);
+      if (this._units[name]) throw new Error(`Unit ${loader} already exists`);
       // check name (simple)
       if (typeof name !== "string" || "post" === name)
         throw new Error(`Wrong unit name: ${name}`);
-      // check unit
-      this._attach(name, unit);
+      // every unit is lazy?
+      if (!(loader instanceof UnitBase)) {
+        loader = new UnitLazyLoader(loader);
+        loader._resolved = u => this._attach(name, u);
+      }
+      // update list
+      this._attach(name, loader);
     }
-    return this;
   }
 
   terminate(name = null) {
     const _terminate = key => {
       const unit = this._units[key];
       // stop it if loaded
-      if (unit instanceof UnitBase) unit.terminate();
+      if (!(unit instanceof UnitLazyLoader)) unit.terminate();
       // drop it
       if (unit) delete this._units[key];
     };
 
     if (name) _terminate(name);
     else {
-      // stop it
-      super.terminate();
-      // drop it
-      delete this._units[this.name];
-      // delete all
-      for (let key of Object.keys(this._units)) _terminate(key);
+      // do not delete this
+      for (let [key, unit] of Object.entries(this._units))
+        if (unit !== this) _terminate(key);
     }
   }
 }

@@ -96,17 +96,16 @@ export class UnitCallsEngine extends Map {
 
   _oncall(data, handler) {
     const { reference } = data;
-    // default
-    if (!(reference && reference.owner === this._handler.name))
+    // default context
+    if (!(reference && reference.owner === handler.name))
       return handler._oncall(data);
     // object's
     if (reference[OBJECT]) {
       const o = this.get(reference[OBJECT]);
-      if (!(o instanceof UnitObject))
-        throw new Error(
-          `Wrong object for ${data.method} in ${reference.owner}`
-        );
-      return o._oncall(data);
+      const { method } = data;
+      if (!(o instanceof UnitObject) || !(method in o))
+        throw new Error(`Wrong object for ${method} in ${reference.owner}`);
+      return o[method](...data.args);
     }
     // function's
     if (reference[FUNCTION]) {

@@ -38,12 +38,4 @@ export class UnitObject {
     if (el) el.every(f => f(...args));
     return this;
   }
-
-  _oncall(data) {
-    const { method, args } = data;
-    if (!(method in this))
-      throw new Error(`Method ${method} has to be declared in ${data.target}`);
-    // may be async as well
-    return this[method](...args);
-  }
 }

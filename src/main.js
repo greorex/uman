@@ -20,7 +20,7 @@ export class UnitMain extends UnitsManager {
     super();
 
     // atach
-    this.init(name);
+    this.name = name;
     this._units = {
       [name]: this
     };

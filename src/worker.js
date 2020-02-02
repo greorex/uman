@@ -26,51 +26,48 @@ class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
-    // private
-    const _handlers = {
-      [EVENT]: data => this._onevent(data),
-
-      [REQUEST]: async data => {
-        const response = {
-          cid: data.cid
-        };
-
-        // receipt
-        response.type = RECEIPT;
-        engine.postMessage(response);
-
-        // call
-        try {
-          const { _calls } = this;
-          // check arguments
-          data.args = _calls.fromArguments(data.args);
-          // call
-          const result = await _calls._oncall(data, this);
-          // check result
-          response.result = _calls.toResult(result);
-        } catch (error) {
-          response.error = error;
-        }
-
-        // response
-        response.type = RESPONSE;
-        engine.postMessage(response);
-      },
-
-      [RESPONSE]: data => this._calls.onresponse(data),
-
-      [RECEIPT]: data => this._calls.onreceipt(data)
-    };
-
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
     engine.onmessage = event => {
       const { data } = event;
       // is this our message?
-      if (data instanceof Object && data.type in _handlers) {
-        return _handlers[data.type](data);
+      switch (data instanceof Object && data.type) {
+        case EVENT:
+          return this._onevent(data);
+
+        case REQUEST:
+          return (async () => {
+            const response = {
+              cid: data.cid
+            };
+            // receipt
+            response.type = RECEIPT;
+            engine.postMessage(response);
+            // call
+            try {
+              const { _calls } = this;
+              // check arguments
+              data.args = _calls.fromArguments(data.args);
+              // call
+              const result = await _calls._oncall(data, this);
+              // check result
+              response.result = _calls.toResult(result);
+            } catch (error) {
+              response.error = error;
+            }
+            // response
+            response.type = RESPONSE;
+            engine.postMessage(response);
+          })();
+
+        case RESPONSE:
+          return this._calls.onresponse(data);
+
+        case RECEIPT:
+          return this._calls.onreceipt(data);
       }
+
       // call standard listener
       // @ts-ignore
       this.onmessage instanceof Function && this.onmessage(event);
@@ -147,7 +144,19 @@ export class UnitWorker extends UnitWorkerEngine {
   constructor(worker) {
     super(worker);
 
-    this.terminate = () => worker.terminate();
+    this.terminate = async () => {
+      // tell worker self
+      // @ts-ignore
+      await this._onterminate();
+      // drop engine
+      worker.terminate();
+    };
+
+    this.init = async () => {
+      // tell worker self
+      // @ts-ignore
+      await this._oninit(this.name, this.options);
+    };
   }
 
   _onevent(data) {
@@ -159,13 +168,6 @@ export class UnitWorker extends UnitWorkerEngine {
     if (data.target) return this._redispatch(data);
     return super._oncall(data);
   }
-
-  init(name) {
-    super.init(name);
-
-    // initialize worker self
-    this.post("init", name, this.options);
-  }
 }
 
 /**
@@ -174,11 +176,16 @@ export class UnitWorker extends UnitWorkerEngine {
 export class UnitWorkerSelf extends UnitWorkerEngine {
   constructor(engine = self) {
     super(engine);
-  }
 
-  oninit(event) {
-    const [name, options] = event.args;
-    this.init(name);
-    this.options = { ...options };
+    this._oninit = async (name, options) => {
+      this.name = name;
+      this.options = { ...options };
+      // initialize
+      await this.init();
+    };
+
+    this._onterminate = async () => {
+      await this.terminate();
+    };
   }
 }

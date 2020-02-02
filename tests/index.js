@@ -174,7 +174,7 @@ test("Misconception", async () => {
 test("Terminate", async () => {
   main.terminate();
   // check real list
-  return !Object.keys(main._units).length ? "passed" : "failed";
+  return 1 === Object.keys(main._units).length ? "passed" : "failed";
 });
 
 te.run();

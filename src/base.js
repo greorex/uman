@@ -12,7 +12,6 @@
 
 import { MessageType } from "./enums";
 import { UnitOptionsDefault } from "./options";
-import { UnitObject } from "./object";
 import { UnitsProxy } from "./proxy";
 import { UnitCallsEngine } from "./calls";
 
@@ -23,10 +22,8 @@ const REQUEST = MessageType.REQUEST;
 /**
  * unit base call engine
  */
-export class UnitBase extends UnitObject {
+export class UnitBase {
   constructor() {
-    super();
-
     this.options = { ...UnitOptionsDefault };
 
     // manager engine
@@ -54,9 +51,7 @@ export class UnitBase extends UnitObject {
     });
   }
 
-  init(name) {
-    this.name = name;
-  }
+  async init() {}
 
   terminate() {}
 
@@ -83,6 +78,14 @@ export class UnitBase extends UnitObject {
     // priority #3
     const m = `on${method}`;
     m in this && this[m](data);
+  }
+
+  _oncall(data) {
+    const { method, args } = data;
+    if (!(method in this))
+      throw new Error(`Method ${method} has to be declared in ${data.target}`);
+    // may be async as well
+    return this[method](...args);
   }
 
   _dispatch(data) {

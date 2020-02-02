@@ -67,8 +67,6 @@ describe("runs all tests", () => {
   });
 
   test("methods and events", async () => {
-    // check real list
-    expect(main._units.tests).toBeInstanceOf(UnitObject);
     // but call proxied
     const result = await main.units.tests.pureTest(testArray);
     // post event
@@ -115,6 +113,7 @@ describe("runs all tests", () => {
   test("all other units terminated", () => {
     main.terminate();
     // check real list
-    expect(Object.keys(main._units).length).toEqual(0);
+    expect(Object.keys(main._units).length).toEqual(1);
+    expect(main._units.main).toBeInstanceOf(Main);
   });
 });
