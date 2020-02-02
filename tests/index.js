@@ -184,4 +184,8 @@ test("Terminate", async () => {
   return 1 === Object.keys(main._units).length ? "passed" : "failed";
 });
 
+test("Args and Returns from worker", async () => {
+  return await uman.units.tests.testArgsReturns(testArray);
+});
+
 te.run();
