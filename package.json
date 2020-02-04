@@ -1,6 +1,6 @@
 {
   "name": "uman",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",
@@ -51,6 +51,7 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
+    "worker-loader": "^2.0.0",
     "worker-plugin": "^3.2.0"
   }
 }

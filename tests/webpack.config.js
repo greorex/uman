@@ -1,5 +1,5 @@
 const path = require("path");
-const WorkerPlugin = require("worker-plugin");
+// const WorkerPlugin = require("worker-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { name, version } = require("./../package.json");
 
@@ -28,10 +28,10 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       title: `${name}, v${version}, development`
-    }),
-    new WorkerPlugin({
-      globalObject: "self"
     })
+    // new WorkerPlugin({
+    //   globalObject: "self"
+    // })
   ],
   devtool: "source-map",
   devServer: {

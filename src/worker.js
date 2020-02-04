@@ -22,7 +22,7 @@ const RECEIPT = MessageType.RECEIPT;
 /**
  * unit worker communication engine
  */
-class UnitWorkerEngine extends UnitBase {
+export class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
@@ -142,58 +142,5 @@ class UnitWorkerEngine extends UnitBase {
       method: event,
       args
     });
-  }
-}
-
-/**
- * unit base for worker adapter
- */
-export class UnitWorker extends UnitWorkerEngine {
-  constructor(worker) {
-    super(worker);
-
-    this.terminate = async () => {
-      // tell worker self
-      // @ts-ignore
-      await this._onterminate();
-      // drop engine
-      worker.terminate();
-    };
-
-    this.init = async () => {
-      // tell worker self
-      // @ts-ignore
-      await this._oninit(this.name, this.options);
-    };
-  }
-
-  _onevent(data) {
-    if (data.target) return this._redispatch(data);
-    return super._onevent(data);
-  }
-
-  _oncall(data) {
-    if (data.target) return this._redispatch(data);
-    return super._oncall(data);
-  }
-}
-
-/**
- * unit base for worker script file
- */
-export class UnitWorkerSelf extends UnitWorkerEngine {
-  constructor(engine = self) {
-    super(engine);
-
-    this._oninit = async (name, options) => {
-      this.name = name;
-      this.options = { ...options };
-      // initialize
-      await this.init();
-    };
-
-    this._onterminate = async () => {
-      await this.terminate();
-    };
   }
 }

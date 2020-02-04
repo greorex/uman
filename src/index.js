@@ -22,10 +22,16 @@
 
 // @ts-check
 
+// basic level
 export { MessageType, TargetType } from "./enums";
 export { UnitOptionsDefault } from "./options";
 export { UnitObject } from "./object";
-export { UnitWorker, UnitWorkerSelf } from "./worker";
 export { Unit } from "./unit";
-export { UnitMain } from "./main";
 export { UnitsManager } from "./manager";
+export { UnitMain } from "./main";
+// expert level
+export { UnitLoader } from "./loader";
+export { UnitWorker } from "./adapters/dedicated";
+export { UnitSharedWorker } from "./adapters/shared";
+export { UnitWorkerSelf } from "./workers/dedicated";
+export { UnitSharedWorkerSelf } from "./workers/shared";

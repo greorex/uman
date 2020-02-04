@@ -37,6 +37,10 @@ export class UnitBase extends UnitEventEmitter {
     // call engine
     this._calls = new UnitCallsEngine(this);
 
+    // no then function
+    // if promise check
+    this.then = undefined;
+
     // proxy engine
     return new Proxy(this, {
       get: (t, prop, receiver) => {

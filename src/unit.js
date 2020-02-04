@@ -11,19 +11,19 @@
 // @ts-check
 
 import { UnitBase } from "./base";
-import { UnitWorkerSelf } from "./worker";
+import { UnitWorkerSelf } from "./workers/dedicated";
+import { UnitSharedWorkerSelf } from "./workers/shared";
 
 /**
  * determines unit base class by globalThis
  */
 const UnitAutoClass = () => {
-  if (
-    self &&
-    !self.window &&
-    self.postMessage instanceof Function &&
-    self.importScripts instanceof Function
-  )
-    return UnitWorkerSelf;
+  if (self && self.self && self.importScripts instanceof Function) {
+    if (self.postMessage instanceof Function) return UnitWorkerSelf;
+    if ("port" in self) return UnitSharedWorkerSelf;
+    // don't know where we are
+    throw new Error("Unknown global scope");
+  }
   return UnitBase;
 };
 
@@ -32,7 +32,13 @@ const UnitAutoClass = () => {
  */
 export class Unit extends UnitAutoClass() {
   static instance(unitClass) {
-    if (UnitWorkerSelf === UnitAutoClass()) return new unitClass();
+    // create unit instance
+    switch (UnitAutoClass()) {
+      case UnitWorkerSelf:
+      case UnitSharedWorkerSelf:
+        return new unitClass();
+    }
+    // on demand
     return unitClass;
   }
 }

@@ -1,4 +1,10 @@
-import { UnitMain, UnitWorker, UnitObject, UnitOptionsDefault } from "uman";
+import {
+  UnitMain,
+  UnitLoader,
+  UnitWorker,
+  UnitObject,
+  UnitOptionsDefault
+} from "uman";
 
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
@@ -6,7 +12,7 @@ import { pureTest, pureSum } from "./pure";
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
 const times = 1000;
-// UnitOptionsDefault.timeout = 0;
+UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
@@ -99,13 +105,13 @@ const main = new Main();
 // add units
 main.add({
   // worker thread
-  one: new Worker("./units/one.js", { type: "module" }),
-  // one: () => import("./units/one"),
+  // one: new Worker("./units/one.js", { type: "module" }),
+  one: () => import("worker-loader!./units/one"),
   // lazy import
   two: import("./units/two"),
   // other worker thread on demand
-  tests: () => new Worker("./units/tests.js", { type: "module" }),
-  // tests: () => import("./units/tests"),
+  // tests: () => new Worker("./units/tests.js", { type: "module" }),
+  tests: () => import("worker-loader!./units/tests"),
   // create on demand?
   log: innerLog ? new LogUnit() : () => new LogUnit()
 });
@@ -145,17 +151,23 @@ test("No Manager", async () => {
     }
   }
 
-  const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
+  // const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
+  const unit = await UnitLoader.load(
+    import("worker-loader!./units/tests.js"),
+    TestUnit
+  );
 
   await unit.init();
 
-  unit.on("noManagerTest", (...args) => {
+  const off = await unit.on("noManagerTest", (...args) => {
     render(`${args[0]}  received`);
   });
 
   unit.post("noManagerTest", "unit -> event sent");
 
   const result = await unit.noManagerTest(testArray);
+
+  off();
 
   unit.terminate();
 
@@ -182,10 +194,6 @@ test("Terminate", async () => {
   main.terminate();
   // check real list
   return 1 === Object.keys(main._units).length ? "passed" : "failed";
-});
-
-test("Args and Returns from worker", async () => {
-  return await uman.units.tests.testArgsReturns(testArray);
 });
 
 te.run();
