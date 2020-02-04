@@ -148,11 +148,11 @@ import LogUnit from "./units/log";
 // add units
 main.add({
   // web worker thread
-  one: () => new Worker("./units/one.js", { type: "module" }),
-  // lazy import
+  one: () => import("worker-loader!./units/one.js"),
+  // lazy import into main thread
   two: () => import("./units/two"),
   // other web worker thread
-  tests: () => new Worker("./units/tests.js", { type: "module" }),
+  tests: () => import("worker-loader!./units/tests.js"),
   // direct instance
   log: new LogUnit()
 });

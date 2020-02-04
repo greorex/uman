@@ -18,17 +18,16 @@ import { UnitSharedWorker } from "./adapters/shared";
  * lazy loader engine
  */
 export class UnitLoader {
-  constructor(loader) {
-    this.name = "";
-    this.load = async (adapterClass = null) => {
+  constructor(loader, name = "") {
+    this.start = async (adapterClass = null) => {
       let unit = loader;
       // case function
       if (unit instanceof Function) unit = unit();
       // case promise
       if (unit instanceof Promise) {
-        const m = await unit.then();
+        unit = await unit;
         // may be as 'export default class'
-        if (m.default instanceof Function) unit = new m.default();
+        if (unit.default instanceof Function) unit = new unit.default();
       }
       // case worker
       if (unit instanceof Worker) {
@@ -43,14 +42,15 @@ export class UnitLoader {
       }
       // finaly unit has to be as
       if (!(unit instanceof UnitBase))
-        throw new Error(`Wrong class of unit: ${this.name}`);
-      // call proper method
+        throw new Error(`Wrong class of unit: ${name}`);
+      // own start
+      unit.name = name;
+      await unit.start();
       return unit;
     };
   }
 
-  static load(loader, adapterClass = null) {
-    const unit = new UnitLoader(loader);
-    return unit.load(adapterClass);
+  static start(loader, adapterClass = null) {
+    return new UnitLoader(loader).start(adapterClass);
   }
 }

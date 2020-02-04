@@ -1,5 +1,4 @@
 const path = require("path");
-// const WorkerPlugin = require("worker-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { name, version } = require("./../package.json");
 
@@ -29,14 +28,13 @@ module.exports = {
     new HtmlWebpackPlugin({
       title: `${name}, v${version}, development`
     })
-    // new WorkerPlugin({
-    //   globalObject: "self"
-    // })
   ],
   devtool: "source-map",
   devServer: {
     host: "0.0.0.0",
     port: "8080",
+    compress: true,
+    https: true,
     contentBase: [path.join(__dirname, "public")]
   }
 };

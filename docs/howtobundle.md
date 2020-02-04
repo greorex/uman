@@ -4,53 +4,34 @@ _A javascript library to split your code with web workers_
 
 ## How to bundle
 
-Use webpack or other bundler with code-splitting support.
+Use bundler with code-splitting support.
 
 > Note, the library is not transpiled, so do not ignore it while transpiling your bundles and chunks.
 
-For webpack, the configuration could be the following:
+For _webpack_ you may use:
+
+- _worker-loader_ plugin with worker scripts.
+- _sharedworker-loader_ plugin with shared worker scripts.
+
+Inline syntax is supported:
 
 ```javascript
-const path = require("path");
-const WorkerPlugin = require("worker-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+const main = UnitMain();
 
-module.exports = {
-  mode: "development",
-  entry: "./index.js",
-  output: {
-    filename: "[name].bundle.js",
-    chunkFilename: "[name].chunk.js",
-    path: path.resolve(__dirname, "public")
-  },
-  module: {
-    rules: [
-      {
-        test: /\.m?js$/,
-        loader: "babel-loader",
-        // do not exclude "uman"
-        exclude: /node_modules\/(?!(uman)\/).*/
-        // for browsers to support
-        // use proper babel.config
-        // with @babel/preset-env
-      }
-    ]
-  },
-  plugins: [
-    new HtmlWebpackPlugin({
-      title: `Uman tests`
-    }),
-    new WorkerPlugin({
-      globalObject: "self"
-    })
-  ],
-  devtool: "source-map",
-  devServer: {
-    host: "0.0.0.0",
-    port: "8080",
-    contentBase: [path.join(__dirname, "public")]
-  }
-};
+main.add({
+  // web worker thread
+  // as function
+  // will be loaded and resolved on demand
+  one: () => import("worker-loader!./units/one.js"),
+  // other web worker thread
+  // as promise
+  // will be resolved on demand
+  two: import("worker-loader!./units/two"),
+  // other shared worker thread
+  six: () => import("sharedworker-loader!./units/six"),
+  // or as promise
+  ten: import("sharedworker-loader!./units/ten")
+});
 ```
 
 ## License

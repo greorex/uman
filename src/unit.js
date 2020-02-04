@@ -20,7 +20,7 @@ import { UnitSharedWorkerSelf } from "./workers/shared";
 const UnitAutoClass = () => {
   if (self && self.self && self.importScripts instanceof Function) {
     if (self.postMessage instanceof Function) return UnitWorkerSelf;
-    if ("port" in self) return UnitSharedWorkerSelf;
+    if (self.close instanceof Function) return UnitSharedWorkerSelf;
     // don't know where we are
     throw new Error("Unknown global scope");
   }

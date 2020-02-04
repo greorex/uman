@@ -9,6 +9,12 @@ class OneObject extends UnitObject {
 
 export default Unit.instance(
   class extends Unit {
+    constructor() {
+      super();
+
+      this._id = performance.now();
+    }
+
     // returns sum of array's elements
     sum(arr) {
       return arr.reduce((r, i) => (r += i), 0);
@@ -31,8 +37,8 @@ export default Unit.instance(
       return new OneObject();
     }
 
-    init() {
-      console.log("one initialized");
+    start() {
+      console.log(`one started with ID=${this._id}`);
     }
 
     terminate() {

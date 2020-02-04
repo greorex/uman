@@ -12,6 +12,7 @@ import { pureTest, pureSum } from "./pure";
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
 const times = 1000;
+// to debug...
 UnitOptionsDefault.timeout = 0;
 
 const render = message => {
@@ -105,13 +106,13 @@ const main = new Main();
 // add units
 main.add({
   // worker thread
-  // one: new Worker("./units/one.js", { type: "module" }),
   one: () => import("worker-loader!./units/one"),
+  // one: () => import("./units/one"),
   // lazy import
   two: import("./units/two"),
   // other worker thread on demand
-  // tests: () => new Worker("./units/tests.js", { type: "module" }),
   tests: () => import("worker-loader!./units/tests"),
+  // tests: () => import("./units/tests"),
   // create on demand?
   log: innerLog ? new LogUnit() : () => new LogUnit()
 });
@@ -145,21 +146,19 @@ const te = new TestEngine();
 const test = (...args) => te.test(...args);
 
 test("No Manager", async () => {
+  // adapter
   class TestUnit extends UnitWorker {
     sum(arr) {
       return pureSum(arr);
     }
   }
 
-  // const unit = new TestUnit(new Worker("./units/tests.js", { type: "module" }));
-  const unit = await UnitLoader.load(
+  const unit = await UnitLoader.start(
     import("worker-loader!./units/tests.js"),
     TestUnit
   );
 
-  await unit.init();
-
-  const off = await unit.on("noManagerTest", (...args) => {
+  const unsibscribe = await unit.on("noManagerTest", (...args) => {
     render(`${args[0]}  received`);
   });
 
@@ -167,7 +166,7 @@ test("No Manager", async () => {
 
   const result = await unit.noManagerTest(testArray);
 
-  off();
+  unsibscribe();
 
   unit.terminate();
 

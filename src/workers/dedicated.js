@@ -19,11 +19,11 @@ export class UnitWorkerSelf extends UnitWorkerEngine {
   constructor(engine) {
     super(engine ? engine : self);
 
-    this._oninit = async (name, options) => {
+    this._onstart = async (name, options) => {
       this.name = name;
       this.options = { ...options };
       // initialize
-      await this.init();
+      await this.start();
     };
 
     this._onterminate = async () => {

@@ -27,10 +27,10 @@ export class UnitWorker extends UnitWorkerEngine {
       worker.terminate();
     };
 
-    this.init = async () => {
+    this.start = async () => {
       // tell worker self
       // @ts-ignore
-      await this._oninit(this.name, this.options);
+      await this._onstart(this.name, this.options);
     };
   }
 

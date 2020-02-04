@@ -4,17 +4,23 @@ _A javascript library to split your code with web workers_
 
 ## API Reference
 
-Classes:
+Engine:
 
 - [Unit](#unit)
 - [UnitMain](#unit_main)
-- [UnitWorker](#unit_worker)
 - [UnitsManager](#units_manager)
 - property: [units](#units)
 
 Special:
 
 - [UnitObject](#unit_object)
+
+Adapters:
+
+- [UnitWorker](#unit_worker)
+- [UnitSharedWorker](#unit_shared_worker)
+
+## Engine
 
 <a name="units_manager"></a>
 
@@ -36,6 +42,9 @@ UnitsManager(units: Object like {
 
 // to add other units
 add(units: see constructor)
+
+// to start unit
+async start(name: string) // by default units are lazy
 
 // to terminate unit
 terminate(name?: string) // all by default
@@ -73,7 +82,7 @@ export default Unit.instance(
 You may override these methods:
 
 ```javascript
-async init() {
+async start() {
   // to initialize unit
   await loading ...
 }
@@ -86,20 +95,6 @@ terminate() {
 The class will be automatically instantiated if it's used as a script part of web worker unit.
 
 But it's possible to use it as ES6+ module, with _import_ and _new_.
-
-<a name="unit_worker"></a>
-
-### UnitWorker
-
-Class to create worker part of web worker unit.
-
-```typescript
-UnitWorker(worker: Worker);
-```
-
-It's created automatically in case you initialize the unit with _Worker_.
-
-You still may use web worker's methods, like _postMessage_ as well as _onmessage_ to catch events to exchange raw data with the worker thread. But with the _Uman_ you don't need to.
 
 <a name="unit_main"></a>
 
@@ -143,6 +138,8 @@ this.units.post(event: string, ...args: any);
 // to "other" unit
 this.units.other.post(event: string, ...args: any);
 ```
+
+## Special
 
 <a name="unit_object"></a>
 
@@ -219,7 +216,39 @@ const result3 = object3.method({ object2, ...args });
 off();
 ```
 
-Don't forget to use async/await if you have to wait the result. Otherwise it would be a _Promise_.
+Don't forget to use async/await if you have to wait any result. Otherwise it would be a _Promise_.
+
+## Adapters
+
+Adaptrers are required to control the workers from the main thread.
+
+With adapters you may use web worker's methods, like _postMessage_ and _onmessage_ to catch events to exchange raw data with the worker thread.
+
+But with the _Uman_ you don't need to.
+
+<a name="unit_worker"></a>
+
+### UnitWorker
+
+Adapter to create worker part of web worker unit.
+
+```typescript
+UnitWorker(worker: Worker);
+```
+
+It's created automatically in case you initialize the unit with _Worker_. In that case the base class for the script part will be _UnitWorkerSelf_.
+
+<a name="unit_shared_worker"></a>
+
+### UnitSharedWorker
+
+Adapter to create shared worker part of shared worker unit.
+
+```typescript
+UnitSharedWorker(worker: SharedWorker);
+```
+
+It's created automatically in case you initialize the unit with _SharedWorker_. In that case the base class for the script part will be _UnitSharedWorkerSelf_.
 
 ## License
 

@@ -16,9 +16,9 @@ import { UnitWorkerSelf } from "./dedicated";
  * shared worker adapter
  */
 class Adapter {
-  constructor(worker) {
-    worker.onconnect = e => {
-      const port = e.source;
+  constructor(engine) {
+    engine.onconnect = e => {
+      const port = e.ports[0];
       port.onmessage = event => {
         this.postMessage = (...args) => port.postMessage(...args);
         // @ts-ignore

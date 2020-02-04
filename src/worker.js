@@ -29,6 +29,9 @@ export class UnitWorkerEngine extends UnitBase {
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
+    engine.onerror = error => {
+      throw new Error(error);
+    };
     engine.onmessage = async event => {
       const { data } = event;
       // is this our message?

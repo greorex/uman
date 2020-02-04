@@ -17,10 +17,17 @@ import { UnitWorker } from "./dedicated";
  */
 class Adapter {
   constructor(worker) {
-    this.postMessage = (...args) => worker.port.postMessage(...args);
+    this.postMessage = (...args) => {
+      worker.port.postMessage(...args);
+    };
     // @ts-ignore
     worker.port.onmessage = event => this.onmessage(event);
+    // @ts-ignore
+    worker.onerror = error => this.onerror(error);
   }
+
+  // absent
+  terminate() {}
 }
 
 /**

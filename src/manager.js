@@ -25,6 +25,9 @@ export class UnitsManager extends Unit {
   constructor(units = {}) {
     super();
 
+    // critical section
+    this._cs = Promise.resolve(undefined);
+
     // real list
     this._units = {};
     // copy entries
@@ -42,22 +45,35 @@ export class UnitsManager extends Unit {
           return;
 
         default:
-          // to target
-          let unit = this._units[target];
-          if (unit) {
-            // load if doesn't
-            if (!(unit instanceof UnitBase)) {
-              unit = await unit.load();
-              this._attach(target, unit);
-              await unit.init();
-            }
-            return unit._dispatch(data);
-          }
+          // to target, load if doesn't
+          const unit = await this.start(target);
+          if (unit) return unit._dispatch(data);
       }
 
       // not a unit or wrong target
       throw new Error(`Wrong target unit: ${target}`);
     };
+  }
+
+  async start(name = null) {
+    if (name) {
+      // wait to enter
+      await this._cs;
+      // get
+      let unit = this._units[name];
+      // load if doesn't
+      if (unit instanceof UnitLoader) {
+        // enter
+        this._cs = new Promise(async resolve => {
+          unit = await unit.start();
+          this._attach(name, unit);
+          resolve(unit);
+        });
+        // leave
+        unit = this._cs;
+      }
+      return unit;
+    }
   }
 
   _attach(name, unit) {
@@ -78,10 +94,10 @@ export class UnitsManager extends Unit {
       // check name (simple)
       if (typeof name !== "string" || "post" === name)
         throw new Error(`Wrong unit name: ${name}`);
-      // every unit is lazy?
-      if (!(loader instanceof UnitBase)) loader = new UnitLoader(loader);
+      // unit isn't lazy?
+      if (loader instanceof UnitBase) this._attach(name, loader);
       // update list
-      this._attach(name, loader);
+      else this._units[name] = new UnitLoader(loader, name);
     }
   }
 
