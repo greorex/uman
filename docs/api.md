@@ -6,6 +6,11 @@ _A javascript library to split your code with web workers_
 
 > Don't forget to _await_ any _async_ result. Otherwise it will be a _Promise_.
 
+How to:
+
+- [use](howtouse.md)
+- [bundle](howtobundle.md)
+
 Engine:
 
 - [Unit](#unit)
