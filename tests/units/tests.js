@@ -31,9 +31,9 @@ export default Unit.instance(
       const { one } = units;
 
       // call method "sum" of Unit One
-      one
-        .sum(arr)
-        .then(result => units.post("log", `Sum of [${arr}] = ${result}`));
+      one.sum(arr).then(result => {
+        units.post("log", `Sum of [${arr}] = ${result}`);
+      });
 
       const sum = await Promise.all([
         // call method "cubes" of Unit Two
@@ -95,8 +95,8 @@ export default Unit.instance(
       return new TestsObject();
     }
 
-    init() {
-      console.log("tests initialized");
+    start() {
+      console.log("tests started");
     }
 
     terminate() {

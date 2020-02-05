@@ -30,5 +30,13 @@ export default Unit.instance(
     OneObject() {
       return new OneObject();
     }
+
+    start() {
+      console.log("one started");
+    }
+
+    terminate() {
+      console.log("one terminated");
+    }
   }
 );
