@@ -37,9 +37,7 @@
     "test": "jest",
     "release": "npm publish || true"
   },
-  "dependencies": {
-    "sharedworker-loader": "^2.1.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/core": "^7.7.7",
     "@babel/preset-env": "^7.7.7",
@@ -53,11 +51,7 @@
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-<<<<<<< HEAD
-    "worker-loader": "^2.0.0"
-=======
     "worker-loader": "^2.0.0",
     "sharedworker-loader": "^2.1.1"
->>>>>>> develop
   }
 }
