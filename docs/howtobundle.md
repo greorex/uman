@@ -8,10 +8,10 @@ Use bundler with code-splitting support.
 
 > Note, the library is not transpiled, so do not ignore it while transpiling your bundles and chunks.
 
-For _webpack_ you may use:
+With _webpack_, for example, you may use:
 
-- _worker-loader_ plugin with worker scripts.
-- _sharedworker-loader_ plugin with shared worker scripts.
+- _worker-loader_ plugin to bundle worker scripts,
+- _sharedworker-loader_ plugin to bundle shared worker scripts.
 
 Inline syntax is supported:
 

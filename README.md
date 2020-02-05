@@ -15,8 +15,9 @@ Being a small but robust javascript library, the _Uman_ lets easily split your c
 - no dependency
 - code splitting support
 - units lazy loading on demand
-- easy communications between units
+- easy communication between units
 - pure multithreading with web workers
+- _dedicated_ and _shared_ workers support
 
 ## Why?
 
@@ -126,7 +127,7 @@ npm install
 npm run dev
 ```
 
-Then open browser with http://loclahost:8080.
+Then open browser with https://loclahost:8080.
 
 <a name="getting_started"></a>
 
@@ -140,8 +141,8 @@ Install the _Uman_ with `npm i uman` and use it with _import_.
 
 ## TODO
 
-- service worker class support
-- node.js support
+- service worker support
+- node.js worker support
 - communication with server units
 
 ## Contacts

@@ -19,7 +19,7 @@ import { UnitSharedWorker } from "./adapters/shared";
  */
 export class UnitLoader {
   constructor(loader, name = "") {
-    this.start = async (adapterClass = null) => {
+    this.instance = async (adapterClass = null) => {
       let unit = loader;
       // case function
       if (unit instanceof Function) unit = unit();
@@ -43,14 +43,13 @@ export class UnitLoader {
       // finaly unit has to be as
       if (!(unit instanceof UnitBase))
         throw new Error(`Wrong class of unit: ${name}`);
-      // own start
+      // done
       unit.name = name;
-      await unit.start();
       return unit;
     };
   }
 
-  static start(loader, adapterClass = null) {
-    return new UnitLoader(loader).start(adapterClass);
+  static instance(adapterClass, loader) {
+    return new UnitLoader(loader).instance(adapterClass);
   }
 }

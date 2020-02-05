@@ -4,6 +4,8 @@ _A javascript library to split your code with web workers_
 
 ## API Reference
 
+> Don't forget to _await_ any _async_ result. Otherwise it will be a _Promise_.
+
 Engine:
 
 - [Unit](#unit)
@@ -29,22 +31,31 @@ Adapters:
 Class to create manager.
 
 ```typescript
-UnitsManager(units: Object like {
-  // 1) created unit
-  name: new Unit(),
-  // 2) unit will be created on demand
-  name: () => new Unit(),
-  // 3) unit will be run on demand as web worker
-  name: () => new Worker(url: string, options: any);
-  // 4) unit will be imported on demand
-  name: () => import('pathto/unit.js');
-});
+UnitsManager(units?: Object); // see add
 
 // to add other units
-add(units: see constructor)
+add(units: Object like {
+  // units:
+  // 1) instantiated
+  name: new Unit(),
+  // 2) will be instantiated on demand in the main thread
+  name: () => new Unit(),
+  // 3) will be imported on demand
+  name: () => import('pathto/unit.js');
+  // 4) will be run on demand as web worker
+  name: () => new Worker(url: string, options: any);
+  // 5) will be run on demand as shared worker
+  name: () => new SharedWorker(url: string, options: any);
+})
+```
 
-// to start unit
-async start(name: string) // by default units are lazy
+By default units are lazy if they are not instantiated. The manager loads them on demand automatically.
+
+But you may do that yourself with:
+
+```typescript
+// returns loaded unit
+async start(name: string)
 
 // to terminate unit
 terminate(name?: string) // all by default
@@ -63,6 +74,7 @@ Unit();
 Please follow the syntax to have the unit as an universal module:
 
 ```typescript
+// 1) inplace export
 export default Unit.instance(
   class extends Unit {
     // your ES6+ code
@@ -77,6 +89,13 @@ export default Unit.instance(
     }
   }
 );
+
+// 2) or
+class MyUnit extends Unit {
+  // your ES6+ code
+}
+
+export default Unit.instance(MyUnit);
 ```
 
 You may override these methods:
@@ -84,23 +103,28 @@ You may override these methods:
 ```javascript
 async start() {
   // to initialize unit
-  await loading ...
+  await loading...
 }
 
-terminate() {
+async terminate() {
   // to finalize unit
+  await unloading...
 }
 ```
 
-The class will be automatically instantiated if it's used as a script part of web worker unit.
+The unit will be automatically instantiated if it's used as a script part of web worker unit.
 
-But it's possible to use it as ES6+ module, with _import_ and _new_.
+But if you'd like to load the unit in the main thread you have to _import_ it as ES6+ module and instantiate with _new_.
+
+> Note, to access other units within the unit use [units](#units) property.
+
+Also you have to read about [UnitObject](#unit_object)s.
 
 <a name="unit_main"></a>
 
 ### UnitMain
 
-Class to create main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
+Class to create the main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
 
 ```typescript
 UnitMain(name?: string); // "main" by default
@@ -110,13 +134,13 @@ UnitMain(name?: string); // "main" by default
 
 ### Property "units"
 
-Each class has special property:
+Each class has special property to communicate with other units:
 
 ```javascript
 units: Object;
 ```
 
-Somewhere in your unit:
+And somewhere in your unit:
 
 ```typescript
 // 1) to call "method" of "other" unit:
@@ -133,7 +157,7 @@ this.units.other.on(event: string, (...args: any) => {
 });
 
 // 4) to post events:
-// to all units, this will be "sender"
+// to all units, "this" will be "sender"
 this.units.post(event: string, ...args: any);
 // to "other" unit
 this.units.other.post(event: string, ...args: any);
@@ -145,7 +169,7 @@ this.units.other.post(event: string, ...args: any);
 
 ### UnitObject
 
-If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. In that case the unit may be as a class factory, while the object will be as interface to access it's methods.
+If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. In that case the unit may be as a class factory, while the object will be as an interface to access it's methods.
 
 > Note, there is no [units](#units) property in _UnitObject_.
 
@@ -192,12 +216,12 @@ export default Unit.instance(
 );
 ```
 
-Somewhere in your unit:
+And somewhere in your unit:
 
 ```typescript
-// call "unit" to create objects
-const object1 = this.units.unit.MyObject(...args);
-const object2 = this.units.unit.MyObject(...args);
+// call "one" to create objects
+const object1 = this.units.one.MyObject(...args);
+const object2 = this.units.one.MyObject(...args);
 
 // subscribe to catch event
 const off = object2.on("event", (...args) => {
@@ -208,7 +232,7 @@ const off = object2.on("event", (...args) => {
 const result1 = object1.method(...args);
 const result2 = object2.method(...args);
 // you my pass them as arguments as well
-const object3 = this.units.other.method(object1, ...args);
+const object3 = this.units.two.method(object1, ...args);
 // or
 const result3 = object3.method({ object2, ...args });
 
@@ -216,7 +240,7 @@ const result3 = object3.method({ object2, ...args });
 off();
 ```
 
-Don't forget to use async/await if you have to wait any result. Otherwise it would be a _Promise_.
+<a name="adapters"></a>
 
 ## Adapters
 

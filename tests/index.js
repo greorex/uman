@@ -153,10 +153,12 @@ test("No Manager", async () => {
     }
   }
 
-  const unit = await UnitLoader.start(
-    import("worker-loader!./units/tests.js"),
-    TestUnit
+  const unit = await UnitLoader.instance(
+    TestUnit,
+    import("worker-loader!./units/tests.js")
   );
+
+  await unit.start();
 
   const unsibscribe = await unit.on("noManagerTest", (...args) => {
     render(`${args[0]}  received`);

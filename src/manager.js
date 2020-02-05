@@ -14,6 +14,7 @@ import { TargetType } from "./enums";
 import { UnitBase } from "./base";
 import { UnitLoader } from "./loader";
 import { Unit } from "./unit";
+import CS from "./critical";
 
 // locals
 const ALL = TargetType.ALL;
@@ -26,7 +27,7 @@ export class UnitsManager extends Unit {
     super();
 
     // critical section
-    this._cs = Promise.resolve(undefined);
+    this._cs = new CS();
 
     // real list
     this._units = {};
@@ -57,22 +58,16 @@ export class UnitsManager extends Unit {
 
   async start(name = null) {
     if (name) {
-      // wait to enter
-      await this._cs;
       // get
       let unit = this._units[name];
+      if (unit instanceof UnitBase) return unit;
       // load if doesn't
-      if (unit instanceof UnitLoader) {
-        // enter
-        this._cs = new Promise(async resolve => {
-          unit = await unit.start();
-          this._attach(name, unit);
-          resolve(unit);
-        });
-        // leave
-        unit = this._cs;
-      }
-      return unit;
+      return this._cs.enter(async leave => {
+        unit = await unit.instance();
+        this._attach(name, unit);
+        await unit.start();
+        leave(unit);
+      });
     }
   }
 
