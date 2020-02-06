@@ -111,14 +111,14 @@ describe("runs all tests", () => {
     expect(result).toEqual("passed");
   });
 
-  test("unit 'tests' terminated", () => {
-    main.terminate("tests");
+  test("unit 'tests' terminated", async () => {
+    await main.terminate("tests");
     // check real list
     expect(Object.keys(main._units).length).toEqual(4);
   });
 
-  test("all other units terminated", () => {
-    main.terminate();
+  test("all other units terminated", async () => {
+    await main.terminate();
     // check real list
     expect(Object.keys(main._units).length).toEqual(1);
     expect(main._units.main).toBeInstanceOf(Main);

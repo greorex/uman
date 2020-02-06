@@ -4,7 +4,7 @@ _A javascript library to split your code with web workers_
 
 ## API Reference
 
-> Don't forget to _await_ any _async_ result. Otherwise it will be a _Promise_.
+> Don't forget to `await` any `async` result. Otherwise it will be a _Promise_.
 
 How to:
 
@@ -22,10 +22,11 @@ Special:
 
 - [UnitObject](#unit_object)
 
-Adapters:
+[Adapters](#adapters):
 
 - [UnitWorker](#unit_worker)
 - [UnitSharedWorker](#unit_shared_worker)
+- [UnitServiceWorker](#unit_service_worker)
 
 ## Engine
 
@@ -46,11 +47,13 @@ add(units: Object like {
   // 2) will be instantiated on demand in the main thread
   name: () => new Unit(),
   // 3) will be imported on demand
-  name: () => import('pathto/unit.js');
+  name: () => import('pathto/unit.js'),
   // 4) will be run on demand as web worker
-  name: () => new Worker(url: string, options: any);
+  name: () => new Worker(url: string, options: any),
   // 5) will be run on demand as shared worker
-  name: () => new SharedWorker(url: string, options: any);
+  name: () => new SharedWorker(url: string, options: any),
+  // 6) as registered service worker
+  name: () => window.navigator.serviceWorker
 })
 ```
 
@@ -59,11 +62,11 @@ By default units are lazy if they are not instantiated. The manager loads them o
 But you may do that yourself with:
 
 ```typescript
-// returns loaded unit
+// to load unit
 async start(name: string)
 
-// to terminate unit
-terminate(name?: string) // all by default
+// or terminate it
+async terminate(name?: string) // all by default
 ```
 
 <a name="unit"></a>
@@ -76,10 +79,11 @@ Class to create unit.
 Unit();
 ```
 
-Please follow the syntax to have the unit as an universal module:
+Please follow the syntax to have the unit as an universal module.
+
+Inplace export
 
 ```typescript
-// 1) inplace export
 export default Unit.instance(
   class extends Unit {
     // your ES6+ code
@@ -94,8 +98,11 @@ export default Unit.instance(
     }
   }
 );
+```
 
-// 2) or
+or
+
+```typescript
 class MyUnit extends Unit {
   // your ES6+ code
 }
@@ -117,13 +124,17 @@ async terminate() {
 }
 ```
 
-The unit will be automatically instantiated if it's used as a script part of web worker unit.
-
-But if you'd like to load the unit in the main thread you have to _import_ it as ES6+ module and instantiate with _new_.
-
-> Note, to access other units within the unit use [units](#units) property.
+Use [units](#units) property to access other units.
 
 Also you have to read about [UnitObject](#unit_object)s.
+
+The base class for the script part will depend on how the unit is [instantiated](#units_manager):
+
+- [UnitWorkerSelf](#unit_worker) - as dedicated worker with _Worker_
+- [UnitSharedWorkerSelf](#unit_shared_worker) - as shared worker with _SharedWorker_
+- [UnitServiceWorkerSelf](#unit_service_worker) - as service worker with _ServiceWorker_
+
+If you'd like to load the unit into the main thread you have to _import_ it as ES6+ module and instantiate with _new_.
 
 <a name="unit_main"></a>
 
@@ -139,30 +150,41 @@ UnitMain(name?: string); // "main" by default
 
 ### Property "units"
 
-Each class has special property to communicate with other units:
+Each class has special property to communicate with other units.
 
 ```javascript
 units: Object;
 ```
 
-And somewhere in your unit:
+To call "method" of "other" unit:
 
 ```typescript
-// 1) to call "method" of "other" unit:
 await this.units.other.method(...args: any);
+```
 
-// 2) to catch "event" from all units
+> Note, there might be timeout error in case no answer.
+
+To catch "event" from all units:
+
+```typescript
 this.units.on(event: string, (sender: string, ...args: any) => {
   // do things
 });
+```
 
-// 3) to catch "event" from "other" unit:
+To catch "event" from "other" unit:
+
+```typescript
 this.units.other.on(event: string, (...args: any) => {
   // do things
 });
+```
 
-// 4) to post events:
-// to all units, "this" will be "sender"
+To post events:
+
+```typescript
+// "this" will be "sender"
+// to all other units
 this.units.post(event: string, ...args: any);
 // to "other" unit
 this.units.other.post(event: string, ...args: any);
@@ -251,7 +273,7 @@ off();
 
 Adaptrers are required to control the workers from the main thread.
 
-With adapters you may use web worker's methods, like _postMessage_ and _onmessage_ to catch events to exchange raw data with the worker thread.
+With adapters you may use web worker's methods, like `postMessage` and `onmessage` to catch events to exchange raw data with the worker thread.
 
 But with the _Uman_ you don't need to.
 
@@ -259,25 +281,47 @@ But with the _Uman_ you don't need to.
 
 ### UnitWorker
 
-Adapter to create worker part of web worker unit.
+[Adapter](#adapters) to create worker part of web worker unit.
 
 ```typescript
 UnitWorker(worker: Worker);
 ```
 
-It's created automatically in case you initialize the unit with _Worker_. In that case the base class for the script part will be _UnitWorkerSelf_.
+It's created automatically in case you initialize the unit with [Worker](https://developer.mozilla.org/docs/Web/API/Worker).
+
+The base class for the script part will be _UnitWorkerSelf_.
 
 <a name="unit_shared_worker"></a>
 
 ### UnitSharedWorker
 
-Adapter to create shared worker part of shared worker unit.
+[Adapter](#adapters) to create shared worker part of shared worker unit.
 
 ```typescript
 UnitSharedWorker(worker: SharedWorker);
 ```
 
-It's created automatically in case you initialize the unit with _SharedWorker_. In that case the base class for the script part will be _UnitSharedWorkerSelf_.
+It's created automatically in case you initialize the unit with [SharedWorker](https://developer.mozilla.org/docs/Web/API/SharedWorker).
+
+The base class for the script part will be _UnitSharedWorkerSelf_.
+
+<a name="unit_service_worker"></a>
+
+### UnitServiceWorker
+
+[Adapter](#adapters) to create service worker part of service worker unit.
+
+> Note, the service worker has to be registered.
+
+> Don't forget to use trusted SSL certificate.
+
+```typescript
+UnitServiceWorker(worker: window.navigator.serviceWorker);
+```
+
+It's created automatically in case you initialize the unit with [ServiceWorker](https://developer.mozilla.org/docs/Web/API/ServiceWorker).
+
+The base class for the script part will be _UnitServiceWorkerSelf_.
 
 ## License
 

@@ -9,28 +9,7 @@ import {
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
-import registerServiceWorker, {
-  ServiceWorkerNoSupportError
-} from "service-worker-loader!./units/two";
-
-const serviceLoader = async () => {
-  try {
-    const reg = await registerServiceWorker({ scope: "/" });
-    if (reg.installing) {
-      console.log("Service worker installing");
-    } else if (reg.waiting) {
-      console.log("Service worker installed");
-    } else if (reg.active) {
-      console.log("Service worker activated");
-    }
-  } catch (error) {
-    if (error instanceof ServiceWorkerNoSupportError) {
-      console.log("Service worker is not supported.");
-    } else {
-      console.log(error);
-    }
-  }
-};
+import registerServiceWorker from "service-worker-loader!./units/two";
 
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
@@ -133,7 +112,10 @@ main.add({
   // one: () => import("./units/one"),
   // lazy import
   // two: import("./units/two"),
-  two: serviceLoader,
+  two: async () => {
+    const reg = await registerServiceWorker({ scope: "/" });
+    if (reg.active) return window.navigator.serviceWorker;
+  },
   // other worker thread on demand
   tests: () => import("worker-loader!./units/tests"),
   // tests: () => import("./units/tests"),
@@ -216,7 +198,7 @@ test("Misconception", async () => {
 });
 
 test("Terminate", async () => {
-  main.terminate();
+  await main.terminate();
   // check real list
   return 1 === Object.keys(main._units).length ? "passed" : "failed";
 });

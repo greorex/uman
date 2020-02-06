@@ -11,11 +11,14 @@ Use bundler with code-splitting support.
 With _webpack_, for example, you may use:
 
 - _worker-loader_ plugin to bundle worker scripts,
-- _sharedworker-loader_ plugin to bundle shared worker scripts.
+- _sharedworker-loader_ plugin to bundle shared worker scripts,
+- _service-worker-loader_ plugin to bundle service worker scripts.
 
 Inline syntax is supported:
 
 ```javascript
+import registerServiceWorker from "service-worker-loader!./units/sw";
+
 const main = UnitMain();
 
 main.add({
@@ -30,7 +33,13 @@ main.add({
   // other shared worker thread
   six: () => import("sharedworker-loader!./units/six"),
   // or as promise
-  ten: import("sharedworker-loader!./units/ten")
+  ten: import("sharedworker-loader!./units/ten"),
+  // as service worker
+  sw: async () => {
+    const reg = await registerServiceWorker({ scope: "/" });
+    // do something...
+    if (reg.active) return window.navigator.serviceWorker;
+  }
 });
 ```
 

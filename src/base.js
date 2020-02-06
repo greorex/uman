@@ -60,7 +60,7 @@ export class UnitBase extends UnitEventEmitter {
 
   async start() {}
 
-  terminate() {}
+  async terminate() {}
 
   _onevent(data) {
     const { method, args, sender } = data;
