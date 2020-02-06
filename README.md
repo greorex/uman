@@ -117,8 +117,8 @@ export default Unit.instance(
         units.two.dothings(...args),
         units.ten.dothings(...args)
       ]);
-      // ask "six" to do things, and reply
-      return await units.six.dothings(result);
+      // ask "sw" to do things, and reply
+      return await units.sw.dothings(result);
     }
   }
 );

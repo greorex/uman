@@ -8,11 +8,11 @@ Use bundler with code-splitting support.
 
 > Note, the library is not transpiled, so do not ignore it while transpiling your bundles and chunks.
 
-With _webpack_, for example, you may use:
+With [webpack](https://webpack.js.org/), for example, you may use:
 
-- _worker-loader_ plugin to bundle worker scripts,
-- _sharedworker-loader_ plugin to bundle shared worker scripts,
-- _service-worker-loader_ plugin to bundle service worker scripts.
+- [worker-loader](https://www.npmjs.com/package/worker-loader) to bundle worker scripts,
+- [sharedworker-loader](https://www.npmjs.com/package/sharedworker-loader) to bundle shared worker scripts,
+- [service-worker-loader](https://www.npmjs.com/package/service-worker-loader) to bundle service worker scripts.
 
 Inline syntax is supported:
 
