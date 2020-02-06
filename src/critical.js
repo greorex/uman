@@ -11,9 +11,11 @@
 
 // import CS from "critical";
 // const cs = new CS();
-// const result = await cs.enter(leave => {
+// const result = await cs.enter((leave, reject) => {
 //   critical code...
 //   leave(result);
+//   or...
+//   reject(error);
 // });
 export default class {
   constructor() {
