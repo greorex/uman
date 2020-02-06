@@ -9,6 +9,7 @@ const logLoader = innerLog ? new Log() : () => new Log();
 
 if (!global.Worker) global.Worker = class Worker {};
 if (!global.SharedWorker) global.SharedWorker = class SharedWorker {};
+if (!global.ServiceWorker) global.ServiceWorker = class ServiceWorker {};
 
 class TestsObject extends UnitObject {
   sum(arr) {

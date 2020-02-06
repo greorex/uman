@@ -1,6 +1,6 @@
 {
   "name": "uman",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",

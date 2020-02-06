@@ -66,7 +66,7 @@ With the _Uman_ everything is as simple as if you code in asynchronous way:
 // ask worker to do things
 const result = await unit.dothings(...args);
 // do things with result
-// or catch error
+// or catch an error
 ```
 
 `worker.js`

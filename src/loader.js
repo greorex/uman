@@ -13,6 +13,7 @@
 import { UnitBase } from "./base";
 import { UnitWorker } from "./adapters/dedicated";
 import { UnitSharedWorker } from "./adapters/shared";
+import { UnitServiceWorker } from "./adapters/service";
 
 /**
  * lazy loader engine
@@ -40,7 +41,14 @@ export class UnitLoader {
         if (!adapterClass) adapterClass = UnitSharedWorker;
         unit = new adapterClass(unit);
       }
+      // case service worker
+      // @ts-ignore
+      if (unit instanceof ServiceWorker) {
+        if (!adapterClass) adapterClass = UnitServiceWorker;
+        unit = new adapterClass(unit);
+      }
 
+      // final check
       if (!(unit instanceof UnitBase))
         throw new Error(`Wrong class of unit: ${name}`);
 

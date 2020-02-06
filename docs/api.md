@@ -79,14 +79,14 @@ Class to create unit.
 Unit();
 ```
 
-Please follow the syntax to have the unit as an universal module.
+Please follow the syntax to have the unit as universal.
 
 Inplace export
 
 ```typescript
 export default Unit.instance(
   class extends Unit {
-    // your ES6+ code
+    // your ES6+ class
     method(...args: any) {
       // do things
       return something;
@@ -134,7 +134,7 @@ The base class for the script part will depend on how the unit is [instantiated]
 - [UnitSharedWorkerSelf](#unit_shared_worker) - as shared worker with _SharedWorker_
 - [UnitServiceWorkerSelf](#unit_service_worker) - as service worker with _ServiceWorker_
 
-If you'd like to load the unit into the main thread you have to _import_ it as ES6+ module and instantiate with _new_.
+If you'd like to load the unit into the main thread you have to `import` it as ES6+ module and instantiate with `new`.
 
 <a name="unit_main"></a>
 
@@ -184,6 +184,7 @@ To post events:
 
 ```typescript
 // "this" will be "sender"
+
 // to all other units
 this.units.post(event: string, ...args: any);
 // to "other" unit
@@ -203,10 +204,13 @@ If you'd like to export object from the unit, you have to extend it's class from
 The object is event emitter and you may subscribe on events fired by it:
 
 ```typescript
+// to subscribe on event
+// returns unsubscribe function
 on(event: string, callback: (...args: any) => {
   // do things
-}) // returns off function
+})
 
+// emits event to subscribers
 fire(event: string, ...args: any);
 ```
 
@@ -214,7 +218,7 @@ Technically, the object will live in the unit's thread but you may call it's met
 
 For example:
 
-`./units/unit.js`
+`./units/one.js`
 
 ```typescript
 class MyObject extends UnitObject {
@@ -273,9 +277,45 @@ off();
 
 Adaptrers are required to control the workers from the main thread.
 
-With adapters you may use web worker's methods, like `postMessage` and `onmessage` to catch events to exchange raw data with the worker thread.
+> Note, they are created automatically with the [manager](#units_manager).
+
+To extend unit's functionality from the main thread side you may use web worker's methods, like `postMessage` and `onmessage` to catch events to exchange raw data with the worker thread.
 
 But with the _Uman_ you don't need to.
+
+For example, if you know "unit" will be always as _shared worker_:
+
+`index.js`
+
+```typescript
+main.add({
+  unit: () =>
+    new (class extends UnitSharedWorker {
+      // your ES6+ class
+      constuctor() {
+        super(new SharedWorker("unit.js"));
+      }
+      progress(persent) {
+        // do something
+      }
+    })()
+});
+
+main.units.unit.dothings();
+```
+
+`unit.js`
+
+```typescript
+new (class extends UnitSharedWorkerSelf {
+  // your ES6+ class
+  dothings() {
+    this.progress(0);
+    // do things...
+    this.progress(100);
+  }
+})();
+```
 
 <a name="unit_worker"></a>
 
