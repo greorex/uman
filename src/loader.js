@@ -27,7 +27,7 @@ export class UnitLoader {
       if (unit instanceof Promise) {
         unit = await unit;
         // may be as 'export default class'
-        if (unit.default instanceof Function) unit = new unit.default();
+        if (unit && unit.default instanceof Function) unit = new unit.default();
       }
       // case worker
       if (unit instanceof Worker) {
@@ -40,11 +40,11 @@ export class UnitLoader {
         if (!adapterClass) adapterClass = UnitSharedWorker;
         unit = new adapterClass(unit);
       }
-      // finaly unit has to be as
+
       if (!(unit instanceof UnitBase))
         throw new Error(`Wrong class of unit: ${name}`);
+
       // done
-      unit.name = name;
       return unit;
     };
   }

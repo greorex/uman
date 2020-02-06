@@ -13,25 +13,22 @@
 import { UnitWorkerSelf } from "./dedicated";
 
 /**
- * shared worker adapter
+ * service worker adapter
  */
 class Adapter {
   constructor(engine) {
-    engine.onconnect = e => {
-      const port = e.ports[0];
-      port.onmessage = event => {
-        this.postMessage = (...args) => port.postMessage(...args);
-        // @ts-ignore
-        this.onmessage(event);
-      };
+    engine.onmessage = event => {
+      this.postMessage = (...args) => engine.source.postMessage(...args);
+      // @ts-ignore
+      this.onmessage(event);
     };
   }
 }
 
 /**
- * unit base for shared worker script file
+ * unit base for service worker script file
  */
-export class UnitSharedWorkerSelf extends UnitWorkerSelf {
+export class UnitServiceWorkerSelf extends UnitWorkerSelf {
   constructor(engine = self) {
     super(new Adapter(engine));
   }

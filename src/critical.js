@@ -27,14 +27,10 @@ export default class {
             resolve(result);
             if (queue.length) queue.pop()();
             else flag = null;
-          });
+          }, reject);
 
-        try {
-          if (flag) queue.unshift(() => f());
-          else (flag = {}), f();
-        } catch (error) {
-          reject(error);
-        }
+        if (flag) queue.unshift(() => f());
+        else (flag = {}), f();
       });
   }
 }

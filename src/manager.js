@@ -62,11 +62,15 @@ export class UnitsManager extends Unit {
       let unit = this._units[name];
       if (unit instanceof UnitBase) return unit;
       // load if doesn't
-      return this._cs.enter(async leave => {
-        unit = await unit.instance();
-        this._attach(name, unit);
-        await unit.start();
-        leave(unit);
+      return this._cs.enter(async (leave, reject) => {
+        try {
+          unit = await unit.instance();
+          this._attach(name, unit);
+          await unit.start();
+          leave(unit);
+        } catch (error) {
+          reject(error);
+        }
       });
     }
   }

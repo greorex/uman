@@ -9,11 +9,34 @@ import {
 import LogUnit from "./units/log";
 import { pureTest, pureSum } from "./pure";
 
+import registerServiceWorker, {
+  ServiceWorkerNoSupportError
+} from "service-worker-loader!./units/two";
+
+const serviceLoader = async () => {
+  try {
+    const reg = await registerServiceWorker({ scope: "/" });
+    if (reg.installing) {
+      console.log("Service worker installing");
+    } else if (reg.waiting) {
+      console.log("Service worker installed");
+    } else if (reg.active) {
+      console.log("Service worker activated");
+    }
+  } catch (error) {
+    if (error instanceof ServiceWorkerNoSupportError) {
+      console.log("Service worker is not supported.");
+    } else {
+      console.log(error);
+    }
+  }
+};
+
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
 const times = 1000;
 // to debug...
-UnitOptionsDefault.timeout = 0;
+// UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
@@ -109,7 +132,8 @@ main.add({
   one: () => import("worker-loader!./units/one"),
   // one: () => import("./units/one"),
   // lazy import
-  two: import("./units/two"),
+  // two: import("./units/two"),
+  two: serviceLoader,
   // other worker thread on demand
   tests: () => import("worker-loader!./units/tests"),
   // tests: () => import("./units/tests"),
