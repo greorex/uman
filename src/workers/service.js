@@ -17,11 +17,16 @@ import { UnitWorkerSelf } from "./dedicated";
  */
 class Adapter {
   constructor(engine) {
-    engine.onmessage = event => {
-      this.postMessage = (...args) => engine.source.postMessage(...args);
-      // @ts-ignore
-      this.onmessage(event);
-    };
+    engine.addEventListener("activate", event => {
+      event.waitUntil(engine.clients.claim());
+    });
+    engine.addEventListener("message", event => {
+      engine.clients.get(event.source.id).then(client => {
+        this.postMessage = (...args) => client.postMessage(...args);
+        // @ts-ignore
+        this.onmessage(event);
+      });
+    });
   }
 }
 

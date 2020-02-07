@@ -17,14 +17,15 @@ import { UnitWorkerSelf } from "./dedicated";
  */
 class Adapter {
   constructor(engine) {
-    engine.onconnect = e => {
-      const port = e.ports[0];
-      port.onmessage = event => {
+    engine.addEventListener("connect", e => {
+      const port = e.source;
+      port.addEventListener("message", event => {
         this.postMessage = (...args) => port.postMessage(...args);
         // @ts-ignore
         this.onmessage(event);
-      };
-    };
+      });
+      port.start();
+    });
   }
 }
 

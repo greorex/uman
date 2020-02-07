@@ -21,9 +21,10 @@ class Adapter {
       worker.port.postMessage(...args);
     };
     // @ts-ignore
-    worker.port.onmessage = event => this.onmessage(event);
+    worker.port.addEventListener("message", event => this.onmessage(event));
+    worker.port.start();
     // @ts-ignore
-    worker.onerror = error => this.onerror(error);
+    worker.addEventListener("error", error => this.onerror(error));
   }
 
   // absent

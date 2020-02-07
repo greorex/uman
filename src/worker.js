@@ -34,6 +34,10 @@ export class UnitWorkerEngine extends UnitBase {
     };
     engine.onmessage = async event => {
       const { data } = event;
+
+      // current event
+      this.event = event;
+
       // is this our message?
       switch (data instanceof Object && data.type) {
         case EVENT: {

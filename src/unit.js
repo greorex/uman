@@ -20,11 +20,8 @@ import { UnitServiceWorkerSelf } from "./workers/service";
  */
 const UnitAutoClass = () => {
   if (self && self.self && self.importScripts instanceof Function) {
-    if (self.postMessage instanceof Function) {
-      // @ts-ignore
-      if (self.skipWaiting instanceof Function) return UnitServiceWorkerSelf;
-      return UnitWorkerSelf;
-    }
+    if ("clients" in self) return UnitServiceWorkerSelf;
+    if (self.postMessage instanceof Function) return UnitWorkerSelf;
     if (self.close instanceof Function) return UnitSharedWorkerSelf;
     // don't know where we are
     throw new Error("Unknown global scope");
@@ -41,6 +38,7 @@ export class Unit extends UnitAutoClass() {
     switch (UnitAutoClass()) {
       case UnitWorkerSelf:
       case UnitSharedWorkerSelf:
+      case UnitServiceWorkerSelf:
         return new unitClass();
     }
     // on demand

@@ -17,15 +17,13 @@ import { UnitWorker } from "./dedicated";
  */
 class Adapter {
   constructor(worker) {
-    this.postMessage = (...args) => worker.controller.postMessage(...args);
-    worker.onmessage = event => {
-      const port = event.source ? event.source : worker.controller;
-      this.postMessage = (...args) => port.postMessage(...args);
-      // @ts-ignore
-      this.onmessage(event);
+    // @ts-ignore
+    worker.addEventListener("message", event => this.onmessage(event));
+    this.postMessage = (...args) => {
+      worker.controller.postMessage(...args);
     };
     // @ts-ignore
-    worker.onerror = error => this.onerror(error);
+    worker.addEventListener("error", error => this.onerror(error));
   }
 
   // absent

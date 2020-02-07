@@ -42,8 +42,11 @@ export class UnitLoader {
         unit = new adapterClass(unit);
       }
       // case service worker
-      // @ts-ignore
-      if (unit instanceof ServiceWorker) {
+      // should be ServiceWorkerContainer
+      // and the page has to be controlled
+      if (unit && "controller" in unit) {
+        if (!unit.controller)
+          throw new Error(`There is no active service worker for: ${name}`);
         if (!adapterClass) adapterClass = UnitServiceWorker;
         unit = new adapterClass(unit);
       }

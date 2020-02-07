@@ -14,12 +14,12 @@ How to:
 Engine:
 
 - [Unit](#unit)
-- [UnitMain](#unit_main)
 - [UnitsManager](#units_manager)
 - property: [units](#units)
 
 Special:
 
+- [UnitMain](#unit_main)
 - [UnitObject](#unit_object)
 
 [Adapters](#adapters):
@@ -136,16 +136,6 @@ The base class for the script part will depend on how the unit is [instantiated]
 
 If you'd like to load the unit into the main thread you have to `import` it as ES6+ module and instantiate with `new`.
 
-<a name="unit_main"></a>
-
-### UnitMain
-
-Class to create the main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
-
-```typescript
-UnitMain(name?: string); // "main" by default
-```
-
 <a name="units"></a>
 
 ### Property "units"
@@ -193,11 +183,27 @@ this.units.other.post(event: string, ...args: any);
 
 ## Special
 
+<a name="unit_main"></a>
+
+### UnitMain
+
+Class to create the main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
+
+```typescript
+UnitMain(name?: string); // "main" by default
+```
+
 <a name="unit_object"></a>
 
 ### UnitObject
 
-If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. In that case the unit may be as a class factory, while the object will be as an interface to access it's methods.
+Due to [structured clone algorithm](https://developer.mozilla.org/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) you are not allowed to transfer complex types between workers, such as objects with methods or functions.
+
+But with the _Uman_ you can.
+
+If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. The unit becomes object's factory, while the object exports own's methods.
+
+Technically, the object lives in the unit's thread but you may call it's methods from other threads.
 
 > Note, there is no [units](#units) property in _UnitObject_.
 
@@ -214,9 +220,7 @@ on(event: string, callback: (...args: any) => {
 fire(event: string, ...args: any);
 ```
 
-Technically, the object will live in the unit's thread but you may call it's methods from other threads.
-
-For example:
+Usage:
 
 `./units/one.js`
 

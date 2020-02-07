@@ -11,11 +11,33 @@ import { pureTest, pureSum } from "./pure";
 
 import registerServiceWorker from "service-worker-loader!./units/two";
 
+const twoLoader = () =>
+  new Promise((resolve, reject) => {
+    registerServiceWorker({ scope: "/" })
+      .then(registration => {
+        if (registration.active) resolve(navigator.serviceWorker);
+        else {
+          let serviceWorker;
+          if (registration.installing) serviceWorker = registration.installing;
+          else if (registration.waiting) serviceWorker = registration.waiting;
+          if (serviceWorker)
+            serviceWorker.onstatechange = e => {
+              if (
+                e.target.state === "activated" &&
+                navigator.serviceWorker.controller
+              )
+                resolve(navigator.serviceWorker);
+            };
+        }
+      })
+      .catch(error => reject(error));
+  });
+
 const testArray = [2, 3, 4, 5];
 const innerLog = true;
 const times = 1000;
 // to debug...
-// UnitOptionsDefault.timeout = 0;
+UnitOptionsDefault.timeout = 0;
 
 const render = message => {
   const p = document.createElement("p");
@@ -108,14 +130,11 @@ const main = new Main();
 // add units
 main.add({
   // worker thread
-  one: () => import("worker-loader!./units/one"),
+  one: () => import("sharedworker-loader!./units/one"),
   // one: () => import("./units/one"),
   // lazy import
   // two: import("./units/two"),
-  two: async () => {
-    const reg = await registerServiceWorker({ scope: "/" });
-    if (reg.active) return window.navigator.serviceWorker;
-  },
+  two: twoLoader,
   // other worker thread on demand
   tests: () => import("worker-loader!./units/tests"),
   // tests: () => import("./units/tests"),
