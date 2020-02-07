@@ -133,8 +133,8 @@ main.add({
   one: () => import("sharedworker-loader!./units/one"),
   // one: () => import("./units/one"),
   // lazy import
-  // two: import("./units/two"),
-  two: twoLoader,
+  two: import("./units/two"),
+  // two: twoLoader,
   // other worker thread on demand
   tests: () => import("worker-loader!./units/tests"),
   // tests: () => import("./units/tests"),
