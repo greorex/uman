@@ -19,13 +19,16 @@ import { UnitServiceWorkerSelf } from "./workers/service";
  * determines unit base class by globalThis
  */
 const UnitAutoClass = () => {
-  if (self && self.self && self.importScripts instanceof Function) {
-    if ("clients" in self) return UnitServiceWorkerSelf;
-    if (self.postMessage instanceof Function) return UnitWorkerSelf;
-    if (self.close instanceof Function) return UnitSharedWorkerSelf;
-    // don't know where we are
-    throw new Error("Unknown global scope");
-  }
+  // @ts-ignore
+  if (typeof DedicatedWorkerGlobalScope !== "undefined") return UnitWorkerSelf;
+  // @ts-ignore
+  if (typeof SharedWorkerGlobalScope !== "undefined")
+    return UnitSharedWorkerSelf;
+  // @ts-ignore
+  if (typeof ServiceWorkerGlobalScope !== "undefined")
+    return UnitServiceWorkerSelf;
+
+  // default
   return UnitBase;
 };
 

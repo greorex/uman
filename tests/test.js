@@ -7,9 +7,6 @@ const innerLog = true;
 
 const logLoader = innerLog ? new Log() : () => new Log();
 
-if (!global.Worker) global.Worker = class Worker {};
-if (!global.SharedWorker) global.SharedWorker = class SharedWorker {};
-
 class TestsObject extends UnitObject {
   sum(arr) {
     this.fire("sum", arr);

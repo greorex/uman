@@ -22,6 +22,8 @@ export class UnitLoader {
   constructor(loader, name = "") {
     this.instance = async (adapterClass = null) => {
       let unit = loader;
+
+      // load
       // case function
       if (unit instanceof Function) unit = unit();
       // case promise
@@ -30,25 +32,37 @@ export class UnitLoader {
         // may be as 'export default class'
         if (unit && unit.default instanceof Function) unit = new unit.default();
       }
-      // case worker
-      if (unit instanceof Worker) {
-        if (!adapterClass) adapterClass = UnitWorker;
-        unit = new adapterClass(unit);
-      }
-      // case shared worker
-      // @ts-ignore
-      if (unit instanceof SharedWorker) {
-        if (!adapterClass) adapterClass = UnitSharedWorker;
-        unit = new adapterClass(unit);
-      }
-      // case service worker
-      // should be ServiceWorkerContainer
-      // and the page has to be controlled
-      if (unit && "controller" in unit) {
-        if (!unit.controller)
-          throw new Error(`There is no active service worker for: ${name}`);
-        if (!adapterClass) adapterClass = UnitServiceWorker;
-        unit = new adapterClass(unit);
+
+      // init
+      if (unit) {
+        // case worker
+        if (typeof Worker !== "undefined" && unit instanceof Worker) {
+          if (!adapterClass) adapterClass = UnitWorker;
+          unit = new adapterClass(unit);
+        }
+        // case shared worker
+        if (
+          // @ts-ignore
+          typeof SharedWorker !== "undefined" &&
+          // @ts-ignore
+          unit instanceof SharedWorker
+        ) {
+          if (!adapterClass) adapterClass = UnitSharedWorker;
+          unit = new adapterClass(unit);
+        }
+        // case service worker
+        // should be ServiceWorkerContainer
+        if (
+          typeof navigator !== "undefined" &&
+          "serviceWorker" in navigator &&
+          "controller" in unit
+        ) {
+          // and the page has to be controlled
+          if (!unit.controller)
+            throw new Error(`There is no active service worker for: ${name}`);
+          if (!adapterClass) adapterClass = UnitServiceWorker;
+          unit = new adapterClass(unit);
+        }
       }
 
       // final check
