@@ -13,6 +13,10 @@
 import { UnitWorkerEngine } from "../worker";
 
 /**
+ * loader
+ */
+
+/**
  * unit base for worker adapter
  */
 export class UnitWorker extends UnitWorkerEngine {
@@ -32,6 +36,17 @@ export class UnitWorker extends UnitWorkerEngine {
       // @ts-ignore
       await this._onstart(this.name, this.options);
     };
+  }
+
+  static loader() {
+    return [
+      ({ loader, adapter }) => {
+        if (loader instanceof Worker) {
+          if (!adapter) adapter = UnitWorker;
+          return new adapter(loader);
+        }
+      }
+    ];
   }
 
   _onevent(data) {

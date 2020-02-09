@@ -61,8 +61,12 @@ export class UnitCallsEngine extends Map {
     // private
     let _n = 0;
 
-    // next key
-    this.next = () => ++_n;
+    // returns the key
+    this.store = value => {
+      ++_n;
+      this.set(_n, value);
+      return _n;
+    };
 
     // redispatcher
     this._handler = handler;
@@ -71,8 +75,7 @@ export class UnitCallsEngine extends Map {
 
   cache(handler, type) {
     const owner = this._handler.name,
-      id = this.next();
-    this.set(id, handler);
+      id = this.store(handler);
     // reference
     return {
       [type]: id,

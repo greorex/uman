@@ -19,14 +19,17 @@ import { UnitServiceWorkerSelf } from "./workers/service";
  * determines unit base class by globalThis
  */
 const UnitAutoClass = () => {
-  // @ts-ignore
-  if (typeof DedicatedWorkerGlobalScope !== "undefined") return UnitWorkerSelf;
-  // @ts-ignore
-  if (typeof SharedWorkerGlobalScope !== "undefined")
-    return UnitSharedWorkerSelf;
-  // @ts-ignore
-  if (typeof ServiceWorkerGlobalScope !== "undefined")
-    return UnitServiceWorkerSelf;
+  switch ("function") {
+    // @ts-ignore
+    case typeof DedicatedWorkerGlobalScope:
+      return UnitWorkerSelf;
+    // @ts-ignore
+    case typeof SharedWorkerGlobalScope:
+      return UnitSharedWorkerSelf;
+    // @ts-ignore
+    case typeof ServiceWorkerGlobalScope:
+      return UnitServiceWorkerSelf;
+  }
 
   // default
   return UnitBase;

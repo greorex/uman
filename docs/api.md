@@ -104,7 +104,7 @@ or
 
 ```typescript
 class MyUnit extends Unit {
-  // your ES6+ code
+  // your ES6+ class
 }
 
 export default Unit.instance(MyUnit);
@@ -287,22 +287,22 @@ To extend unit's functionality from the main thread side you may use web worker'
 
 But with the _Uman_ you don't need to.
 
-For example, if you know "unit" will be always as _shared worker_:
+For example, if you know "unit" will always be as _shared worker_:
 
 `index.js`
 
 ```typescript
+class Adapter extends UnitSharedWorker {
+  progress(persent) {
+    // do something
+  }
+}
+
 main.add({
-  unit: () =>
-    new (class extends UnitSharedWorker {
-      // your ES6+ class
-      constuctor() {
-        super(new SharedWorker("unit.js"));
-      }
-      progress(persent) {
-        // do something
-      }
-    })()
+  unit: {
+    loader: () => new SharedWorker("unit.js"),
+    adapter: Adapter
+  }
 });
 
 main.units.unit.dothings();
@@ -311,14 +311,16 @@ main.units.unit.dothings();
 `unit.js`
 
 ```typescript
-new (class extends UnitSharedWorkerSelf {
+class MyUnit extends UnitSharedWorkerSelf {
   // your ES6+ class
   dothings() {
     this.progress(0);
     // do things...
     this.progress(100);
   }
-})();
+}
+
+new MyUnit();
 ```
 
 <a name="unit_worker"></a>
@@ -331,7 +333,7 @@ new (class extends UnitSharedWorkerSelf {
 UnitWorker(worker: Worker);
 ```
 
-It's created automatically in case you initialize the unit with [Worker](https://developer.mozilla.org/docs/Web/API/Worker).
+It's created automatically if you initialize the unit with [Worker](https://developer.mozilla.org/docs/Web/API/Worker).
 
 The base class for the script part will be _UnitWorkerSelf_.
 
@@ -345,7 +347,7 @@ The base class for the script part will be _UnitWorkerSelf_.
 UnitSharedWorker(worker: SharedWorker);
 ```
 
-It's created automatically in case you initialize the unit with [SharedWorker](https://developer.mozilla.org/docs/Web/API/SharedWorker).
+It's created automatically if you initialize the unit with [SharedWorker](https://developer.mozilla.org/docs/Web/API/SharedWorker).
 
 The base class for the script part will be _UnitSharedWorkerSelf_.
 
@@ -357,13 +359,13 @@ The base class for the script part will be _UnitSharedWorkerSelf_.
 
 > Note, the service worker has to be registered.
 
-> Don't forget to use trusted SSL certificate.
+> Don't forget to use https and trusted SSL certificate.
 
 ```typescript
 UnitServiceWorker(worker: window.navigator.serviceWorker);
 ```
 
-It's created automatically in case you initialize the unit with [ServiceWorker](https://developer.mozilla.org/docs/Web/API/ServiceWorker).
+It's created automatically if you initialize the unit with [ServiceWorker](https://developer.mozilla.org/docs/Web/API/ServiceWorkerContainer).
 
 The base class for the script part will be _UnitServiceWorkerSelf_.
 

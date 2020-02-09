@@ -13,18 +13,22 @@
 import { UnitWorker } from "./dedicated";
 
 /**
- * shared worker adapter
+ * to control shared worker
  */
 class Adapter {
   constructor(worker) {
     this.postMessage = (...args) => {
       worker.port.postMessage(...args);
     };
-    // @ts-ignore
-    worker.port.addEventListener("message", event => this.onmessage(event));
+    worker.port.addEventListener("message", event => {
+      // @ts-ignore
+      this.onmessage(event);
+    });
     worker.port.start();
-    // @ts-ignore
-    worker.addEventListener("error", error => this.onerror(error));
+    worker.addEventListener("error", error => {
+      // @ts-ignore
+      this.onerror(error);
+    });
   }
 
   // absent
@@ -37,5 +41,17 @@ class Adapter {
 export class UnitSharedWorker extends UnitWorker {
   constructor(worker) {
     super(new Adapter(worker));
+  }
+
+  static loader() {
+    return [
+      ({ loader, adapter }) => {
+        // @ts-ignore
+        if (loader instanceof SharedWorker) {
+          if (!adapter) adapter = UnitSharedWorker;
+          return new adapter(loader);
+        }
+      }
+    ];
   }
 }

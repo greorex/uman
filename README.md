@@ -17,7 +17,7 @@ Being a small but robust javascript library, the _Uman_ lets easily split your c
 - units lazy loading on demand
 - easy communication between units
 - pure multithreading with web workers
-- [dedicated](https://developer.mozilla.org/docs/Web/API/Worker), [shared](https://developer.mozilla.org/docs/Web/API/SharedWorker) and [service](https://developer.mozilla.org/docs/Web/API/ServiceWorker) workers support
+- [dedicated](https://developer.mozilla.org/docs/Web/API/Worker), [shared](https://developer.mozilla.org/docs/Web/API/SharedWorker) and [service](https://developer.mozilla.org/docs/Web/API/Service_Worker_API) workers support
 
 ## Why?
 
@@ -25,7 +25,7 @@ _Javascript_ is single threaded. The browser freezes UI and other operations if 
 
 The best choice is _web workers_ to run the code in background threads independently from the main thread. This also gives you pure multithreading approach.
 
-To start code with _web worker_ you usually do the following:
+To start code with _worker_ you usually do the following:
 
 `main.js`
 
@@ -69,7 +69,7 @@ const result = await unit.dothings(...args);
 // or catch an error
 ```
 
-`worker.js`
+`unit.js`
 
 ```javascript
 // reply
@@ -95,10 +95,11 @@ main.add({
   // ...
   // main thread unit
   // with lazy loading
-  ten: () => import("ten.js"),
+  six: () => import("six.js"),
   // as a service worker
-  // has to be registered
-  sw: () => window.navigator.serviceWorker
+  // from source "ten.js"
+  // has to be activated
+  ten: () => window.navigator.serviceWorker
 });
 
 // do
@@ -115,16 +116,16 @@ export default Unit.instance(
       // ask other workers to do things
       const result = await Promise.all([
         units.two.dothings(...args),
-        units.ten.dothings(...args)
+        units.six.dothings(...args)
       ]);
-      // ask "sw" to do things, and reply
-      return await units.sw.dothings(result);
+      // ask "ten" to do things, and reply
+      return await units.ten.dothings(result);
     }
   }
 );
 ```
 
-`two.js`, `ten.js` or `sw.js`
+`two.js`, `six.js` or `ten.js`
 
 ```javascript
 export default Unit.instance(
@@ -144,17 +145,17 @@ There are some [working examples](https://github.com/greorex/uman/tree/master/te
 Clone repository and:
 
 ```
-npm install
+npm i
 npm run dev
 ```
 
-Then open browser with https://loclahost:8080.
+Then open browser with http://loclahost:8080.
 
 <a name="getting_started"></a>
 
 ## Getting started
 
-Install the _Uman_ with `npm i uman` and use it with _import_.
+Install the _Uman_ with `npm i -D uman` and use it with `import`.
 
 - [How to use](docs/howtouse.md)
 - [API reference](docs/api.md)

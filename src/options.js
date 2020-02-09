@@ -13,6 +13,9 @@
 /**
  * default unit's options
  */
-export const UnitOptionsDefault = {
-  timeout: 5000
+export default {
+  timeout: 5 * 1000, // unit alive?
+  serviceWorker: {
+    timeout: 5 * 1000 // controlled?
+  }
 };

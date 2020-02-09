@@ -11,70 +11,65 @@
 // @ts-check
 
 import { UnitBase } from "./base";
-import { UnitWorker } from "./adapters/dedicated";
-import { UnitSharedWorker } from "./adapters/shared";
-import { UnitServiceWorker } from "./adapters/service";
+
+/**
+ * loaders by order
+ */
+const loadersQueue = [
+  // function
+  params => {
+    const { loader } = params;
+    if (loader instanceof Function) return loader();
+  },
+  // promise
+  params => {
+    const { loader } = params;
+    if (loader instanceof Promise) return loader;
+  },
+  // module
+  params => {
+    let { loader, args } = params;
+    if (loader && loader.default instanceof Function) {
+      // has to be export default class
+      loader = loader.default;
+      if (loader && loader.constructor) {
+        if (!args) args = [];
+        return new loader(...args);
+      }
+    }
+  }
+];
 
 /**
  * lazy loader engine
  */
 export class UnitLoader {
-  constructor(loader, name = "") {
-    this.instance = async (adapterClass = null) => {
-      let unit = loader;
-
-      // load
-      // case function
-      if (unit instanceof Function) unit = unit();
-      // case promise
-      if (unit instanceof Promise) {
-        unit = await unit;
-        // may be as 'export default class'
-        if (unit && unit.default instanceof Function) unit = new unit.default();
-      }
-
-      // init
-      if (unit) {
-        // case worker
-        if (typeof Worker !== "undefined" && unit instanceof Worker) {
-          if (!adapterClass) adapterClass = UnitWorker;
-          unit = new adapterClass(unit);
-        }
-        // case shared worker
-        if (
-          // @ts-ignore
-          typeof SharedWorker !== "undefined" &&
-          // @ts-ignore
-          unit instanceof SharedWorker
-        ) {
-          if (!adapterClass) adapterClass = UnitSharedWorker;
-          unit = new adapterClass(unit);
-        }
-        // case service worker
-        // should be ServiceWorkerContainer
-        if (
-          typeof navigator !== "undefined" &&
-          "serviceWorker" in navigator &&
-          "controller" in unit
-        ) {
-          // and the page has to be controlled
-          if (!unit.controller)
-            throw new Error(`There is no active service worker for: ${name}`);
-          if (!adapterClass) adapterClass = UnitServiceWorker;
-          unit = new adapterClass(unit);
-        }
-      }
-
-      // final check
-      if (!(unit instanceof UnitBase))
-        throw new Error(`Wrong class of unit: ${name}`);
-
-      // done
-      return unit;
-    };
+  constructor(params) {
+    this.params = params;
   }
 
-  static instance(adapterClass, loader) {
-    return new UnitLoader(loader).instance(adapterClass);
+  async instance() {
+    let { loader, name, ...rest } = this.params;
+    for (let f of loadersQueue) {
+      const unit = await f({ loader, name, ...rest });
+      // loaded?
+      if (unit instanceof UnitBase) return unit;
+      // try next
+      if (unit) loader = unit;
+    }
+
+    throw new Error(`Wrong class of unit: ${name}`);
+  }
+
+  static instance(params) {
+    return new UnitLoader(params).instance();
+  }
+
+  static register(loader) {
+    if (Array.isArray(loader)) {
+      for (let l of loader) UnitLoader.register(l);
+    } else {
+      if (!loadersQueue.includes(loader)) loadersQueue.push(loader);
+    }
   }
 }

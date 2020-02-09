@@ -20,12 +20,11 @@ class Adapter {
     engine.addEventListener("activate", event => {
       event.waitUntil(engine.clients.claim());
     });
-    engine.addEventListener("message", event => {
-      engine.clients.get(event.source.id).then(client => {
-        this.postMessage = (...args) => client.postMessage(...args);
-        // @ts-ignore
-        this.onmessage(event);
-      });
+    engine.addEventListener("message", async event => {
+      const client = await engine.clients.get(event.source.id);
+      this.postMessage = (...args) => client.postMessage(...args);
+      // @ts-ignore
+      this.onmessage(event);
     });
   }
 }

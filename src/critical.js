@@ -24,12 +24,12 @@ export default class {
 
     this.enter = section =>
       new Promise((resolve, reject) => {
-        const f = () =>
-          section(result => {
-            resolve(result);
-            if (queue.length) queue.pop()();
-            else flag = null;
-          }, reject);
+        const f = () => {
+          section(resolve, reject);
+          // next
+          if (queue.length) queue.pop()();
+          if (!queue.length) flag = null;
+        };
 
         if (flag) queue.unshift(() => f());
         else (flag = {}), f();

@@ -62,21 +62,21 @@ export class UnitsManager extends Unit {
       let unit = this._units[name];
       if (unit instanceof UnitBase) return unit;
       // load if doesn't
-      return this._loader.enter(async (leave, reject) => {
-        try {
-          unit = await unit.instance();
-          this._attach(name, unit);
-          await unit.start();
-          leave(unit);
-        } catch (error) {
-          reject(error);
-        }
-      });
+      if (unit)
+        return this._loader.enter(async (leave, reject) => {
+          try {
+            unit = await unit.instance();
+            this._attach(name, unit);
+            await unit.start();
+            leave(unit);
+          } catch (error) {
+            reject(error);
+          }
+        });
     }
   }
 
   _attach(name, unit) {
-    // attach
     unit.name = name;
     // common
     // @ts-ignore
@@ -96,7 +96,13 @@ export class UnitsManager extends Unit {
       // unit isn't lazy?
       if (loader instanceof UnitBase) this._attach(name, loader);
       // update list
-      else this._units[name] = new UnitLoader(loader, name);
+      else if (!loader) throw new Error(`Wrong loader for unit: ${name}`);
+      else {
+        if ("loader" in loader) loader.name = name;
+        else loader = { loader, name };
+        // as loader
+        this._units[name] = new UnitLoader(loader);
+      }
     }
   }
 

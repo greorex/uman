@@ -22,6 +22,29 @@
 
 // @ts-check
 
+import { UnitWorker } from "./adapters/dedicated";
+import { UnitSharedWorker } from "./adapters/shared";
+import { UnitServiceWorker } from "./adapters/service";
+import { UnitLoader } from "./loader";
+
+// register workers
+// dedicated
+if (typeof Worker !== "undefined") {
+  UnitLoader.register(UnitWorker.loader());
+}
+// shared
+// @ts-ignore
+if (typeof SharedWorker !== "undefined") {
+  UnitLoader.register(UnitSharedWorker.loader());
+}
+// service
+if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+  UnitLoader.register(UnitServiceWorker.loader());
+}
+
+//@ts-ignore
+export { version, name } from "./../package.json";
+
 // basic level
 export { UnitObject } from "./object";
 export { Unit } from "./unit";
@@ -29,16 +52,13 @@ export { UnitsManager } from "./manager";
 export { UnitMain } from "./main";
 
 // expert level
+export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
-export { UnitOptionsDefault } from "./options";
 export { default as CriticalSection } from "./critical";
-export { UnitLoader } from "./loader";
-// dedicated worker
-export { UnitWorker } from "./adapters/dedicated";
+export { UnitLoader };
+// adapters
+export { UnitWorker, UnitSharedWorker, UnitServiceWorker };
+// workers
 export { UnitWorkerSelf } from "./workers/dedicated";
-// shared worker
-export { UnitSharedWorker } from "./adapters/shared";
 export { UnitSharedWorkerSelf } from "./workers/shared";
-// service worker
-export { UnitServiceWorker } from "./adapters/service";
 export { UnitServiceWorkerSelf } from "./workers/service";
