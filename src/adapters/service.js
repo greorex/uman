@@ -18,13 +18,13 @@ import options from "../options";
  */
 class Adapter {
   constructor(worker) {
+    this.postMessage = (...args) => {
+      worker.controller.postMessage(...args);
+    };
     worker.addEventListener("message", event => {
       // @ts-ignore
       this.onmessage(event);
     });
-    this.postMessage = (...args) => {
-      worker.controller.postMessage(...args);
-    };
     worker.addEventListener("error", error => {
       // @ts-ignore
       this.onerror(error);
@@ -44,38 +44,54 @@ export class UnitServiceWorker extends UnitWorker {
   }
 
   static loader() {
+    // options
+    options.serviceWorker = {
+      timeout: 5 * 1000 // wait to be controlled
+    };
+
+    // loaders
     return [
-      // registerServiceWorker
+      // ServiceWorkerRegistration
       ({ loader, name }) => {
         if (loader instanceof ServiceWorkerRegistration) {
-          if (loader.active) return navigator.serviceWorker;
-          else {
-            let sw;
-            if (loader.installing) sw = loader.installing;
-            else if (loader.waiting) sw = loader.waiting;
-            if (!sw) throw new Error(`There is no service worker for ${name}`);
-            // wait?
-            return new Promise((resolve, reject) => {
-              const timer = setTimeout(() => {
-                reject(`Timeout while activating service worker for ${name}`);
-              }, options.serviceWorker.timeout);
-              sw.onstatechange = e => {
-                if (e.target.state === "activated") {
-                  clearTimeout(timer);
-                  resolve(navigator.serviceWorker);
-                }
-              };
-            });
+          let sw;
+          // ready?
+          if (loader.active) {
+            return navigator.serviceWorker;
+          } else if (loader.installing) {
+            sw = loader.installing;
+          } else if (loader.waiting) {
+            sw = loader.waiting;
+          } else {
+            throw new Error(`There is no service worker for ${name}`);
           }
+          // done but
+          return new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              reject(
+                new Error(`Timeout while activating service worker for ${name}`)
+              );
+            }, options.serviceWorker.timeout);
+            // wait
+            sw.onstatechange = e => {
+              if (e.target.state === "activated") {
+                clearTimeout(timer);
+                resolve(navigator.serviceWorker);
+              }
+            };
+          });
         }
       },
       // navigator.serviceWorker
       ({ loader, adapter, name }) => {
         if (loader === navigator.serviceWorker) {
-          // and the page has to be controlled
-          if (!loader.controller)
+          // the page has to be controlled
+          if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
+          }
+          // use default
           if (!adapter) adapter = UnitServiceWorker;
+          // done
           return new adapter(loader);
         }
       }

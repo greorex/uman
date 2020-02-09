@@ -127,8 +127,11 @@ export class UnitCallsEngine extends Map {
         a instanceof Object && !Array.isArray(a) ? f(a) : a
       );
     }
-    // object
-    else if (args instanceof Object) {
+    // plain objects
+    else if (
+      args instanceof Object &&
+      Object.prototype.toString.call(args) === "[object Object]"
+    ) {
       const r = {};
       for (let [key, a] of Object.entries(args))
         r[key] = a instanceof Object && !Array.isArray(a) ? f(a) : a;

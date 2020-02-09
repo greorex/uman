@@ -13,10 +13,6 @@
 import { UnitWorkerEngine } from "../worker";
 
 /**
- * loader
- */
-
-/**
  * unit base for worker adapter
  */
 export class UnitWorker extends UnitWorkerEngine {
@@ -42,7 +38,9 @@ export class UnitWorker extends UnitWorkerEngine {
     return [
       ({ loader, adapter }) => {
         if (loader instanceof Worker) {
+          // use default
           if (!adapter) adapter = UnitWorker;
+          // done
           return new adapter(loader);
         }
       }

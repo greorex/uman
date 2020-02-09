@@ -20,7 +20,7 @@ describe(`${name}, v${version}`, () => {
       log: () => import("./units/log"),
       one: () => import("worker-loader!./units/one"),
       two: () => import("sharedworker-loader!./units/two"),
-      tests: () => import("worker-loader!./units/tests")
+      tests: () => import("sharedworker-loader!./units/tests")
       // tests: {
       //   loader: () => import("service-worker-loader!./units/tests"),
       //   args: [{ scope: "/" }]

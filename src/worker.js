@@ -35,9 +35,6 @@ export class UnitWorkerEngine extends UnitBase {
     engine.onmessage = async event => {
       const { data } = event;
 
-      // current event
-      this.event = event;
-
       // is this our message?
       switch (data instanceof Object && data.type) {
         case EVENT: {
@@ -50,10 +47,17 @@ export class UnitWorkerEngine extends UnitBase {
             cid: data.cid
           };
 
+          // proper engine?
+          let _engine = engine;
+          if (data.engine) {
+            // the last one is the engine
+            data.args.push((_engine = data.engine));
+          }
+
           if (data.receipt) {
             // alive
             response.type = RECEIPT;
-            engine.postMessage(response);
+            _engine.postMessage(response);
           }
 
           // call
@@ -71,7 +75,7 @@ export class UnitWorkerEngine extends UnitBase {
 
           // response
           response.type = RESPONSE;
-          engine.postMessage(response);
+          _engine.postMessage(response);
           return;
         }
 
@@ -127,12 +131,14 @@ export class UnitWorkerEngine extends UnitBase {
                 () =>
                   // @ts-ignore
                   c.onresponse({
-                    error: `Timeout on request ${data.method} in ${data.target}`
+                    error: new Error(
+                      `Timeout on request ${data.method} in ${data.target}`
+                    )
                   }),
                 options.timeout
               );
               c.onreceipt = () => {
-                timer && clearTimeout(timer);
+                clearTimeout(timer);
               };
             }
           });
