@@ -157,7 +157,7 @@ await this.units.other.method(...args: any);
 To catch "event" from all units:
 
 ```typescript
-this.units.on(event: string, sender: string, ...args: any) => {
+this.units.on(event: string, (sender: string, ...args: any) => {
   // do things
 });
 ```
@@ -165,7 +165,7 @@ this.units.on(event: string, sender: string, ...args: any) => {
 To catch "event" from "other" unit:
 
 ```typescript
-this.units.other.on(event: string, ...args: any) => {
+this.units.other.on(event: string, (...args: any) => {
   // do things
 });
 ```
@@ -259,7 +259,7 @@ const object1 = this.units.one.MyObject(...args);
 const object2 = this.units.one.MyObject(...args);
 
 // subscribe to catch event
-const off = object2.on("event", ...args) => {
+const off = object2.on("event", (...args) => {
   // do things
 });
 
