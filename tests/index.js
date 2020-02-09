@@ -1,200 +1,107 @@
-import {
-  UnitMain,
-  UnitLoader,
-  UnitWorker,
-  UnitObject,
-  UnitOptionsDefault
-} from "uman";
+import { render, describe, test, beforeAll, expect } from "./engine";
+import { Main, Adapter } from "./classes";
+import { name, version, options, UnitLoader, UnitsManager } from "uman";
 
-import LogUnit from "./units/log";
-import { pureTest, pureSum } from "./pure";
-
-const testArray = [2, 3, 4, 5];
-const innerLog = true;
-const times = 1000;
 // to debug...
-UnitOptionsDefault.timeout = 0;
+options.timeout = 0;
 
-const render = message => {
-  const p = document.createElement("p");
-  if (message.startsWith("#")) p.style.fontWeight = "bold";
-  if (message.match(/failed|Error|Timeout/)) p.style.color = "red";
-  p.innerHTML = message;
-  document.body.appendChild(p);
-};
+/**
+ * tests
+ */
+describe(`${name}, v${version}`, () => {
+  let main;
+  const testArray = [2, 3, 4, 5];
+  const innerLog = true;
 
-class TestsObject extends UnitObject {
-  sum(arr) {
-    this.fire("sum", arr);
-    return pureSum(arr);
-  }
-}
+  beforeAll(async () => {
+    main = new Main();
 
-// main class to run app
-class Main extends UnitMain {
-  constructor() {
-    super();
-
-    this.units.tests.on("log", message => render(message));
-
-    this.units.on("testEvents", (sender, ...args) => {
-      render(`${args[0]} received from ${sender} by ${this.name}`);
-    });
-  }
-
-  async test(arr) {
-    let result = await this.units.tests.run(arr);
-
-    this.units.post("testEvents", "units.post -> event sent");
-
-    if (result === "passed") {
-      const t0 = performance.now();
-      for (let i = times; i--; ) await this.units.tests.pureTest(arr);
-      const t1 = performance.now();
-      for (let i = times; i--; ) pureTest(arr);
-      const t2 = performance.now();
-
-      const ams = d => (d / times).toFixed(3);
-      const d1 = ams(t1 - t0),
-        d2 = ams(t2 - t1);
-
-      render(`${times} times. Avarage = ${d1}, pure = ${d2} ms`);
-    }
-    return result;
-  }
-
-  async testArgsReturns(arr) {
-    const testsObject = await this.units.tests.TestsObject();
-
-    const unsibscribe = await testsObject.on("sum", arr => {
-      this.units.post("log", "callback: testsObject.onsum " + arr);
+    main.add({
+      log: () => import("./units/log"),
+      one: () => import("worker-loader!./units/one"),
+      two: () => import("sharedworker-loader!./units/two"),
+      tests: () => import("worker-loader!./units/tests")
+      // tests: {
+      //   loader: () => import("service-worker-loader!./units/tests"),
+      //   args: [{ scope: "/" }]
+      // }
     });
 
-    const oneObject = await this.units.one.OneObject();
-    oneObject.on("test", () => {
-      this.units.post("log", "callback: oneObject.ontest");
+    if (innerLog) await main.start("log");
+  });
+
+  test("no manager", async () => {
+    const unit = await UnitLoader.instance({
+      loader: import("worker-loader!./units/tests.js"),
+      adapter: Adapter
     });
 
-    const result = await oneObject.test({ testsObject, arr });
+    await unit.start();
+
+    const unsibscribe = await unit.on("noManagerTest", (...args) => {
+      render(`${args[0]}  received`);
+    });
+
+    unit.post("noManagerTest", "unit -> event sent");
+
+    const result = await unit.noManagerTest(testArray);
 
     unsibscribe();
 
-    return result === pureSum(arr) ? "passed" : "failed";
-  }
+    unit.terminate();
 
-  async testMisconception(arr) {
-    const object = new TestsObject();
-    this.units.one.on("testMisconception", () => {
-      this.units.post("log", "main.units.one.ontestMisconception");
-    });
-    // try to pass UnitObject or Unit
-    const result = await this.units.tests.testMisconception(
-      { object, one: this.units.one },
-      arr
-    );
-    return result;
-  }
-
-  TestsObject() {
-    return new TestsObject();
-  }
-}
-
-// main unit
-const main = new Main();
-
-// add units
-main.add({
-  // worker thread
-  one: () => import("worker-loader!./units/one"),
-  // one: () => import("./units/one"),
-  // lazy import
-  two: import("./units/two"),
-  // other worker thread on demand
-  tests: () => import("worker-loader!./units/tests"),
-  // tests: () => import("./units/tests"),
-  // create on demand?
-  log: innerLog ? new LogUnit() : () => new LogUnit()
-});
-
-// run all
-class TestEngine {
-  constructor() {
-    this.cases = [];
-  }
-
-  test(name, func) {
-    this.cases.push({
-      name,
-      func
-    });
-  }
-
-  async run() {
-    for (let item of this.cases) {
-      render("# " + item.name);
-      try {
-        render("Test " + (await item.func()));
-      } catch (error) {
-        render("Test " + error);
-      }
-    }
-  }
-}
-
-const te = new TestEngine();
-const test = (...args) => te.test(...args);
-
-test("No Manager", async () => {
-  // adapter
-  class TestUnit extends UnitWorker {
-    sum(arr) {
-      return pureSum(arr);
-    }
-  }
-
-  const unit = await UnitLoader.instance(
-    TestUnit,
-    import("worker-loader!./units/tests.js")
-  );
-
-  await unit.start();
-
-  const unsibscribe = await unit.on("noManagerTest", (...args) => {
-    render(`${args[0]}  received`);
+    expect(result).toEqual("passed");
   });
 
-  unit.post("noManagerTest", "unit -> event sent");
+  test("main unit created", () => {
+    expect(main).toBeInstanceOf(UnitsManager);
+    // check real list
+    expect(main._units.main).toBeInstanceOf(Main);
+  });
 
-  const result = await unit.noManagerTest(testArray);
+  test("other units added", () => {
+    // check real list
+    expect(Object.keys(main._units).length).toEqual(5);
+  });
 
-  unsibscribe();
+  test("methods and events", async () => {
+    // but call proxied
+    const result = await main.units.tests.pureTest(testArray);
+    // post event
+    main.units.post("testEvents", "units.post -> event sent");
+    expect(result).toEqual("passed");
+  });
 
-  unit.terminate();
+  test("inner tests passed", async () => {
+    const result = await main.run(testArray);
+    expect(result).toEqual("passed");
+  });
 
-  return result;
+  test("args and returns", async () => {
+    const result = await main.testArgsReturns(testArray);
+    expect(result).toEqual("passed");
+  });
+
+  test("args and returns from worker", async () => {
+    const result = await main.units.tests.testArgsReturns(testArray);
+    expect(result).toEqual("passed");
+  });
+
+  test("misconception", async () => {
+    const result = await main.testMisconception(testArray);
+    expect(result).toEqual("passed");
+  });
+
+  test("unit 'tests' terminated", async () => {
+    await main.terminate("tests");
+    // check real list
+    expect(Object.keys(main._units).length).toEqual(4);
+  });
+
+  test("other units terminated", async () => {
+    await main.terminate();
+    // check real list
+    expect(Object.keys(main._units).length).toEqual(1);
+    expect(main._units.main).toBeInstanceOf(Main);
+  });
 });
-
-test("Units Manager", async () => {
-  return await main.test(testArray);
-});
-
-test("Args and Returns", async () => {
-  return await main.testArgsReturns(testArray);
-});
-
-test("Args and Returns from worker", async () => {
-  return await main.units.tests.testArgsReturns(testArray);
-});
-
-test("Misconception", async () => {
-  return await main.testMisconception(testArray);
-});
-
-test("Terminate", async () => {
-  main.terminate();
-  // check real list
-  return 1 === Object.keys(main._units).length ? "passed" : "failed";
-});
-
-te.run();

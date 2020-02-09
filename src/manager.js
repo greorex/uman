@@ -26,8 +26,8 @@ export class UnitsManager extends Unit {
   constructor(units = {}) {
     super();
 
-    // critical section
-    this._cs = new CS();
+    // critical sections
+    this._loader = new CS();
 
     // real list
     this._units = {};
@@ -62,17 +62,21 @@ export class UnitsManager extends Unit {
       let unit = this._units[name];
       if (unit instanceof UnitBase) return unit;
       // load if doesn't
-      return this._cs.enter(async leave => {
-        unit = await unit.instance();
-        this._attach(name, unit);
-        await unit.start();
-        leave(unit);
-      });
+      if (unit)
+        return this._loader.enter(async (leave, reject) => {
+          try {
+            unit = await unit.instance();
+            this._attach(name, unit);
+            await unit.start();
+            leave(unit);
+          } catch (error) {
+            reject(error);
+          }
+        });
     }
   }
 
   _attach(name, unit) {
-    // attach
     unit.name = name;
     // common
     // @ts-ignore
@@ -92,24 +96,30 @@ export class UnitsManager extends Unit {
       // unit isn't lazy?
       if (loader instanceof UnitBase) this._attach(name, loader);
       // update list
-      else this._units[name] = new UnitLoader(loader, name);
+      else if (!loader) throw new Error(`Wrong loader for unit: ${name}`);
+      else {
+        if ("loader" in loader) loader.name = name;
+        else loader = { loader, name };
+        // as loader
+        this._units[name] = new UnitLoader(loader);
+      }
     }
   }
 
-  terminate(name = null) {
-    const _terminate = key => {
+  async terminate(name = null) {
+    const _terminate = async key => {
       const unit = this._units[key];
       // stop it if loaded
-      if (unit instanceof UnitBase) unit.terminate();
+      if (unit instanceof UnitBase) await unit.terminate();
       // drop it
       if (unit) delete this._units[key];
     };
 
-    if (name) _terminate(name);
+    if (name) await _terminate(name);
     else {
       // do not delete this
       for (let [key, unit] of Object.entries(this._units))
-        if (unit !== this) _terminate(key);
+        if (unit !== this) await _terminate(key);
     }
   }
 }

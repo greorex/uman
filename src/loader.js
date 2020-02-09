@@ -11,45 +11,65 @@
 // @ts-check
 
 import { UnitBase } from "./base";
-import { UnitWorker } from "./adapters/dedicated";
-import { UnitSharedWorker } from "./adapters/shared";
+
+/**
+ * loaders by order
+ */
+const loadersQueue = [
+  // function
+  params => {
+    const { loader } = params;
+    if (loader instanceof Function) return loader();
+  },
+  // promise
+  params => {
+    const { loader } = params;
+    if (loader instanceof Promise) return loader;
+  },
+  // module
+  params => {
+    let { loader, args } = params;
+    if (loader && loader.default instanceof Function) {
+      // has to be export default class
+      loader = loader.default;
+      if (loader && loader.constructor) {
+        if (!args) args = [];
+        return new loader(...args);
+      }
+    }
+  }
+];
 
 /**
  * lazy loader engine
  */
 export class UnitLoader {
-  constructor(loader, name = "") {
-    this.instance = async (adapterClass = null) => {
-      let unit = loader;
-      // case function
-      if (unit instanceof Function) unit = unit();
-      // case promise
-      if (unit instanceof Promise) {
-        unit = await unit;
-        // may be as 'export default class'
-        if (unit.default instanceof Function) unit = new unit.default();
-      }
-      // case worker
-      if (unit instanceof Worker) {
-        if (!adapterClass) adapterClass = UnitWorker;
-        unit = new adapterClass(unit);
-      }
-      // case shared worker
-      // @ts-ignore
-      if (unit instanceof SharedWorker) {
-        if (!adapterClass) adapterClass = UnitSharedWorker;
-        unit = new adapterClass(unit);
-      }
-      // finaly unit has to be as
-      if (!(unit instanceof UnitBase))
-        throw new Error(`Wrong class of unit: ${name}`);
-      // done
-      unit.name = name;
-      return unit;
-    };
+  constructor(params) {
+    this.params = params;
   }
 
-  static instance(adapterClass, loader) {
-    return new UnitLoader(loader).instance(adapterClass);
+  async instance() {
+    let { loader, name, ...rest } = this.params;
+    for (let f of loadersQueue) {
+      const unit = await f({ loader, name, ...rest });
+      // loaded?
+      if (unit instanceof UnitBase) return unit;
+      // try next
+      if (unit) loader = unit;
+    }
+
+    throw new Error(`Wrong class of unit: ${name}`);
+  }
+
+  static instance(params) {
+    return new UnitLoader(params).instance();
+  }
+
+  static register(loader) {
+    if (Array.isArray(loader)) {
+      for (let l of loader) UnitLoader.register(l);
+    } else {
+      if (!loadersQueue.includes(loader)) loadersQueue.push(loader);
+    }
   }
 }

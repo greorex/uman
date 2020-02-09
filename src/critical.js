@@ -11,9 +11,11 @@
 
 // import CS from "critical";
 // const cs = new CS();
-// const result = await cs.enter(leave => {
+// const result = await cs.enter((leave, reject) => {
 //   critical code...
 //   leave(result);
+//   or...
+//   reject(error);
 // });
 export default class {
   constructor() {
@@ -22,19 +24,15 @@ export default class {
 
     this.enter = section =>
       new Promise((resolve, reject) => {
-        const f = () =>
-          section(result => {
-            resolve(result);
-            if (queue.length) queue.pop()();
-            else flag = null;
-          });
+        const f = () => {
+          section(resolve, reject);
+          // next
+          if (queue.length) queue.pop()();
+          if (!queue.length) flag = null;
+        };
 
-        try {
-          if (flag) queue.unshift(() => f());
-          else (flag = {}), f();
-        } catch (error) {
-          reject(error);
-        }
+        if (flag) queue.unshift(() => f());
+        else (flag = {}), f();
       });
   }
 }

@@ -6,5 +6,13 @@ export default Unit.instance(
     cubes(arr) {
       return arr.map(i => i ** 3);
     }
+
+    start() {
+      console.log("two started");
+    }
+
+    terminate() {
+      console.log("two terminated");
+    }
   }
 );

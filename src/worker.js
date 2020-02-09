@@ -34,6 +34,10 @@ export class UnitWorkerEngine extends UnitBase {
     };
     engine.onmessage = async event => {
       const { data } = event;
+
+      // current event
+      this.event = event;
+
       // is this our message?
       switch (data instanceof Object && data.type) {
         case EVENT: {
@@ -45,9 +49,13 @@ export class UnitWorkerEngine extends UnitBase {
           const response = {
             cid: data.cid
           };
-          // receipt
-          response.type = RECEIPT;
-          engine.postMessage(response);
+
+          if (data.receipt) {
+            // alive
+            response.type = RECEIPT;
+            engine.postMessage(response);
+          }
+
           // call
           try {
             const { _calls } = this;
@@ -60,6 +68,7 @@ export class UnitWorkerEngine extends UnitBase {
           } catch (error) {
             response.error = error;
           }
+
           // response
           response.type = RESPONSE;
           engine.postMessage(response);
@@ -90,43 +99,40 @@ export class UnitWorkerEngine extends UnitBase {
         case REQUEST:
           // post and
           return new Promise((resolve, reject) => {
-            const { _calls } = this,
+            const { _calls, options } = this,
               c = {};
 
-            // next call id
-            data.cid = _calls.next();
             // store call
-            _calls.set(data.cid, c);
+            data.cid = _calls.store(c);
             // check arguments
             data.args = _calls.toArguments(data.args);
+            // to check if target alive
+            if (options.timeout) data.receipt = true;
 
             // post
             engine.postMessage(data);
 
-            // to restore call
-            c.onresponse = response => {
+            // to return result
+            c.onresponse = ({ cid, result, error }) => {
               c.onreceipt instanceof Function && c.onreceipt();
               // remove call
-              _calls.delete(response.cid);
+              _calls.delete(cid);
               // promise's time
-              !response.error
-                ? resolve(_calls.fromResult(response.result))
-                : reject(response.error);
+              !error ? resolve(_calls.fromResult(result)) : reject(error);
             };
 
-            const { options } = this;
-
-            // just in case no receiver
             if (options.timeout) {
-              const timeout = setTimeout(
+              // to check no target
+              const timer = setTimeout(
                 () =>
+                  // @ts-ignore
                   c.onresponse({
                     error: `Timeout on request ${data.method} in ${data.target}`
                   }),
                 options.timeout
               );
               c.onreceipt = () => {
-                timeout && clearTimeout(timeout);
+                timer && clearTimeout(timer);
               };
             }
           });

@@ -27,5 +27,6 @@ public
 src
 scripts
 config
+certs
 .travis.yml
 CHANGELOG.md

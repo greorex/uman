@@ -11,7 +11,7 @@
 // @ts-check
 
 import { MessageType } from "./enums";
-import { UnitOptionsDefault } from "./options";
+import options from "./options";
 import { UnitsProxy } from "./proxy";
 import { UnitCallsEngine } from "./calls";
 import { UnitEventEmitter } from "./emitter";
@@ -27,7 +27,7 @@ export class UnitBase extends UnitEventEmitter {
   constructor() {
     super();
 
-    this.options = { ...UnitOptionsDefault };
+    this.options = { ...options };
 
     // manager engine
     this.name = "";
@@ -60,7 +60,7 @@ export class UnitBase extends UnitEventEmitter {
 
   async start() {}
 
-  terminate() {}
+  async terminate() {}
 
   _onevent(data) {
     const { method, args, sender } = data;

@@ -13,17 +13,25 @@
 import { UnitBase } from "./base";
 import { UnitWorkerSelf } from "./workers/dedicated";
 import { UnitSharedWorkerSelf } from "./workers/shared";
+import { UnitServiceWorkerSelf } from "./workers/service";
 
 /**
  * determines unit base class by globalThis
  */
 const UnitAutoClass = () => {
-  if (self && self.self && self.importScripts instanceof Function) {
-    if (self.postMessage instanceof Function) return UnitWorkerSelf;
-    if (self.close instanceof Function) return UnitSharedWorkerSelf;
-    // don't know where we are
-    throw new Error("Unknown global scope");
+  switch ("function") {
+    // @ts-ignore
+    case typeof DedicatedWorkerGlobalScope:
+      return UnitWorkerSelf;
+    // @ts-ignore
+    case typeof SharedWorkerGlobalScope:
+      return UnitSharedWorkerSelf;
+    // @ts-ignore
+    case typeof ServiceWorkerGlobalScope:
+      return UnitServiceWorkerSelf;
   }
+
+  // default
   return UnitBase;
 };
 
@@ -36,6 +44,7 @@ export class Unit extends UnitAutoClass() {
     switch (UnitAutoClass()) {
       case UnitWorkerSelf:
       case UnitSharedWorkerSelf:
+      case UnitServiceWorkerSelf:
         return new unitClass();
     }
     // on demand

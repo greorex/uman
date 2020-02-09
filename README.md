@@ -6,7 +6,7 @@ _A javascript library to split your code with web workers_
 
 ## About
 
-Being a small but robust javascript library, the _Uman_ lets easily split your code by separarted modules - units. Even more, you may define units as web workers to have pure multithreading way of programming. With the _Uman_ you don't have to think about communication between workers.
+Being a small but robust javascript library, the _Uman_ lets easily split your code by separarted modules - units. Even more, you may define units as [web workers](https://developer.mozilla.org/docs/Web/API/Web_Workers_API) to have pure multithreading way of programming. With the _Uman_ you don't have to think about communication between workers.
 
 ## Features
 
@@ -17,7 +17,7 @@ Being a small but robust javascript library, the _Uman_ lets easily split your c
 - units lazy loading on demand
 - easy communication between units
 - pure multithreading with web workers
-- _dedicated_ and _shared_ workers support
+- [dedicated](https://developer.mozilla.org/docs/Web/API/Worker), [shared](https://developer.mozilla.org/docs/Web/API/SharedWorker) and [service](https://developer.mozilla.org/docs/Web/API/Service_Worker_API) workers support
 
 ## Why?
 
@@ -25,14 +25,15 @@ _Javascript_ is single threaded. The browser freezes UI and other operations if 
 
 The best choice is _web workers_ to run the code in background threads independently from the main thread. This also gives you pure multithreading approach.
 
-To start code with _web worker_ you usually do the following:
+To start code with _worker_ you usually do the following:
 
 `main.js`
 
 ```javascript
-const worker = new Worker("worker.js");
+// ask worker to do things
 worker.postMessage(message);
-worker.onmessage = message => {
+// sometime or never
+worker.onmessage = event => {
   // check if it has data
   // check if it's for you
   // do things
@@ -42,47 +43,67 @@ worker.onmessage = message => {
 `worker.js`
 
 ```javascript
-onmessage(message) {
+// reply
+onmessage = event => {
   // check if it has data
   // check it's for you
-  // do things, response
-  postMessage(message)
-}
+  // do things, reply
+  postMessage(message);
+};
 ```
 
 It looks nice for a task.
 
-But what if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to pass an object with methods to worker or back? How to avoid code duplication?
+But!
+
+What if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to pass an object with methods to worker or back? How to avoid code duplication?
 
 With the _Uman_ everything is as simple as if you code in asynchronous way:
 
 `index.js`
 
 ```javascript
-class Main extends UnitMain {
-  async run() {
-    // ask worker "one" to do things
-    const result = await this.units.one.task(...args);
-    // do things with result
-  }
-}
+// ask worker to do things
+const result = await unit.dothings(...args);
+// do things with result
+// or catch an error
+```
 
-const main = new Main();
+`unit.js`
+
+```javascript
+// reply
+unit.dothings = (...args) => {
+  // do things, reply
+  return result;
+};
+```
+
+To run tasks in separate workers and communicate between them:
+
+`index.js`
+
+```javascript
+const main = new UnitMain();
 
 // set up units
 main.add({
   // as a worker thread
   // with lazy loading
   one: () => new Worker("one.js"),
-  two: () => new Worker("two.js"),
+  two: () => new SharedWorker("two.js"),
   // ...
-  // as a main thread
+  // main thread unit
   // with lazy loading
-  ten: () => import("ten.js")
+  six: () => import("six.js"),
+  // as a service worker
+  // from source "ten.js"
+  // has to be activated
+  ten: () => window.navigator.serviceWorker
 });
 
 // do
-main.run();
+main.units.one.task(...args);
 ```
 
 `one.js`
@@ -91,26 +112,27 @@ main.run();
 export default Unit.instance(
   class extends Unit {
     async task(...args) {
+      const { units } = this;
       // ask other workers to do things
       const result = await Promise.all([
-        this.units.two.dothing(...args),
-        this.units.ten.dothing(...args)
+        units.two.dothings(...args),
+        units.six.dothings(...args)
       ]);
-      // do things, response
-      return result[0] + result[1];
+      // ask "ten" to do things, and reply
+      return await units.ten.dothings(result);
     }
   }
 );
 ```
 
-`two.js` or `ten.js`
+`two.js`, `six.js` or `ten.js`
 
 ```javascript
 export default Unit.instance(
   class extends Unit {
-    async dothing(...args) {
-      // do things, response
-      return await result;
+    async dothings(...args) {
+      // do things, reply
+      return await something...
     }
   }
 );
@@ -123,17 +145,17 @@ There are some [working examples](https://github.com/greorex/uman/tree/master/te
 Clone repository and:
 
 ```
-npm install
+npm i
 npm run dev
 ```
 
-Then open browser with https://loclahost:8080.
+Then open browser with http://loclahost:8080.
 
 <a name="getting_started"></a>
 
 ## Getting started
 
-Install the _Uman_ with `npm i uman` and use it with _import_.
+Install the _Uman_ with `npm i -D uman` and use it with `import`.
 
 - [How to use](docs/howtouse.md)
 - [API reference](docs/api.md)
@@ -141,13 +163,12 @@ Install the _Uman_ with `npm i uman` and use it with _import_.
 
 ## TODO
 
-- service worker support
 - node.js worker support
 - communication with server units
 
 ## Contacts
 
-Please feel free to contact me if you have any questions.
+Please feel free to contact me if you have questions or open an [issue](https://github.com/greorex/uman/issues).
 
 ## License
 

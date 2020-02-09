@@ -13,26 +13,26 @@
 import { UnitWorkerSelf } from "./dedicated";
 
 /**
- * shared worker adapter
+ * service worker adapter
  */
 class Adapter {
   constructor(engine) {
-    engine.addEventListener("connect", e => {
-      const port = e.source;
-      port.addEventListener("message", event => {
-        this.postMessage = (...args) => port.postMessage(...args);
-        // @ts-ignore
-        this.onmessage(event);
-      });
-      port.start();
+    engine.addEventListener("activate", event => {
+      event.waitUntil(engine.clients.claim());
+    });
+    engine.addEventListener("message", async event => {
+      const client = await engine.clients.get(event.source.id);
+      this.postMessage = (...args) => client.postMessage(...args);
+      // @ts-ignore
+      this.onmessage(event);
     });
   }
 }
 
 /**
- * unit base for shared worker script file
+ * unit base for service worker script file
  */
-export class UnitSharedWorkerSelf extends UnitWorkerSelf {
+export class UnitServiceWorkerSelf extends UnitWorkerSelf {
   constructor(engine = self) {
     super(new Adapter(engine));
   }

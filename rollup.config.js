@@ -1,5 +1,6 @@
 import del from "rollup-plugin-delete";
 import { terser } from "rollup-plugin-terser";
+import json from "@rollup/plugin-json";
 import pkg from "./package.json";
 
 const copyright = `(c) 2019-${new Date().getFullYear()} ${pkg.author.replace(
@@ -31,7 +32,7 @@ const config = {
       sourcemap: true
     }
   ],
-  plugins: [del({ targets: "dist/*" }), terser()]
+  plugins: [json(), del({ targets: "dist/*" }), terser()]
 };
 
 export default config;

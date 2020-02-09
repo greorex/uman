@@ -1,6 +1,6 @@
 {
   "name": "uman",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",
@@ -41,6 +41,7 @@
   "devDependencies": {
     "@babel/core": "^7.7.7",
     "@babel/preset-env": "^7.7.7",
+    "@rollup/plugin-json": "^4.0.2",
     "babel-loader": "^8.0.6",
     "html-webpack-plugin": "^3.2.0",
     "jest": "^25.1.0",
@@ -48,10 +49,11 @@
     "rollup": "^1.29.0",
     "rollup-plugin-delete": "^1.1.0",
     "rollup-plugin-terser": "^5.2.0",
+    "service-worker-loader": "^3.3.1",
+    "sharedworker-loader": "^2.1.1",
     "webpack": "^4.41.5",
     "webpack-cli": "^3.3.10",
     "webpack-dev-server": "^3.10.1",
-    "worker-loader": "^2.0.0",
-    "sharedworker-loader": "^2.1.1"
+    "worker-loader": "^2.0.0"
   }
 }
