@@ -18,16 +18,16 @@ import { UnitWorkerEngine } from "../worker";
 export class UnitWorkerSelf extends UnitWorkerEngine {
   constructor(engine) {
     super(engine ? engine : self);
+  }
 
-    this._onstart = async (name, options) => {
-      this.name = name;
-      this.options = { ...options };
-      // initialize
-      await this.start();
-    };
+  async _onstart(name, options) {
+    this.name = name;
+    this.options = { ...options };
+    // initialize
+    await this.start();
+  }
 
-    this._onterminate = async () => {
-      await this.terminate();
-    };
+  async _onterminate() {
+    await this.terminate();
   }
 }

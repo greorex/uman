@@ -17,14 +17,28 @@ import { UnitWorkerSelf } from "./dedicated";
  */
 class Adapter {
   constructor(engine) {
+    // new connections
     engine.addEventListener("activate", event => {
       event.waitUntil(engine.clients.claim());
     });
-    engine.addEventListener("message", async event => {
-      const client = await engine.clients.get(event.source.id);
-      this.postMessage = (...args) => client.postMessage(...args);
-      // @ts-ignore
-      this.onmessage(event);
+
+    // to all controlled clients
+    this.postMessage = (...args) => {
+      engine.clients.matchAll().then(clients => {
+        for (let client of clients) client.postMessage(...args);
+      });
+    };
+
+    engine.addEventListener("message", event => {
+      const promise = engine.clients.get(event.source.id).then(client => {
+        // engine to reply
+        event.data && (event.data.engine = client);
+        // @ts-ignore
+        this.onmessage(event);
+      });
+
+      // extends life of
+      if (event.waitUntil) event.waitUntil(promise);
     });
   }
 }
@@ -33,7 +47,16 @@ class Adapter {
  * unit base for service worker script file
  */
 export class UnitServiceWorkerSelf extends UnitWorkerSelf {
-  constructor(engine = self) {
-    super(new Adapter(engine));
+  constructor(engine = new Adapter(self)) {
+    super(engine);
+
+    // active
+    this.engine = null;
+
+    // proper engine
+    this._engine = data => {
+      if (data.engine) this.engine = data.engine;
+      return this.engine ? this.engine : engine;
+    };
   }
 }

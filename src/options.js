@@ -14,8 +14,5 @@
  * default unit's options
  */
 export default {
-  timeout: 5 * 1000, // unit alive?
-  serviceWorker: {
-    timeout: 5 * 1000 // controlled?
-  }
+  timeout: 5 * 1000 // unit alive?
 };

@@ -127,8 +127,11 @@ export class UnitCallsEngine extends Map {
         a instanceof Object && !Array.isArray(a) ? f(a) : a
       );
     }
-    // object
-    else if (args instanceof Object) {
+    // plain objects
+    else if (
+      args instanceof Object &&
+      Object.prototype.toString.call(args) === "[object Object]"
+    ) {
       const r = {};
       for (let [key, a] of Object.entries(args))
         r[key] = a instanceof Object && !Array.isArray(a) ? f(a) : a;
@@ -162,5 +165,30 @@ export class UnitCallsEngine extends Map {
 
   fromArguments(args) {
     return this.mapArguments(args, a => this.fromResult(a));
+  }
+
+  toRequest({ args, ...rest }, c) {
+    return {
+      ...rest,
+      cid: this.store(c),
+      args: this.toArguments(args)
+    };
+  }
+
+  fromResponse({ cid, result }) {
+    this.delete(cid);
+    return this.fromResult(result);
+  }
+
+  async response({ args, ...rest }, handler) {
+    return this.toResult(
+      await this._oncall(
+        {
+          ...rest,
+          args: this.fromArguments(args)
+        },
+        handler
+      )
+    );
   }
 }

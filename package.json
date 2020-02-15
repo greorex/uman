@@ -1,6 +1,6 @@
 {
   "name": "uman",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",
@@ -49,10 +49,10 @@
     "rollup": "^1.29.0",
     "rollup-plugin-delete": "^1.1.0",
     "rollup-plugin-terser": "^5.2.0",
-    "service-worker-loader": "^3.3.1",
+    "service-worker-loader": "^4.0.0",
     "sharedworker-loader": "^2.1.1",
-    "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10",
+    "webpack": "^4.41.6",
+    "webpack-cli": "^3.3.11",
     "webpack-dev-server": "^3.10.1",
     "worker-loader": "^2.0.0"
   }
