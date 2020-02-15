@@ -26,33 +26,29 @@ export class UnitWorkerEngine extends UnitBase {
   constructor(engine) {
     super();
 
+    // proper engine
+    this._engine = data => engine;
+
     // attach engine (worker or worker self instance)
     // ...args to support transferable objects
     this.postMessage = (...args) => engine.postMessage(...args);
     engine.onerror = error => {
       throw new Error(error);
     };
-    engine.onmessage = async event => {
+    engine.onmessage = event => {
       const { data } = event;
 
       // is this our message?
       switch (data instanceof Object && data.type) {
         case EVENT: {
-          this._onevent(data);
-          return;
+          return this._onevent(data);
         }
 
         case REQUEST: {
-          const response = {
-            cid: data.cid
-          };
-
-          // proper engine?
-          let _engine = engine;
-          if (data.engine) {
-            // the last one is the engine
-            data.args.push((_engine = data.engine));
-          }
+          const _engine = this._engine(data),
+            response = {
+              cid: data.cid
+            };
 
           if (data.receipt) {
             // alive
@@ -61,34 +57,22 @@ export class UnitWorkerEngine extends UnitBase {
           }
 
           // call
-          try {
-            const { _calls } = this;
-            // check arguments
-            data.args = _calls.fromArguments(data.args);
-            // call
-            const result = await _calls._oncall(data, this);
-            // check result
-            response.result = _calls.toResult(result);
-          } catch (error) {
-            response.error = error;
-          }
-
-          // response
           response.type = RESPONSE;
-          _engine.postMessage(response);
-          return;
+          return this._calls
+            .response(data, this)
+            .then(result => (response.result = result))
+            .catch(error => (response.error = error))
+            .finally(() => _engine.postMessage(response));
         }
 
         case RESPONSE: {
           const c = this._calls.get(data.cid);
-          c && c.onresponse(data);
-          return;
+          return c && c.onresponse(data);
         }
 
         case RECEIPT: {
           const c = this._calls.get(data.cid);
-          c && c.onreceipt instanceof Function && c.onreceipt();
-          return;
+          return c && c.onreceipt instanceof Function && c.onreceipt();
         }
       }
 
@@ -103,43 +87,35 @@ export class UnitWorkerEngine extends UnitBase {
         case REQUEST:
           // post and
           return new Promise((resolve, reject) => {
-            const { _calls, options } = this,
+            const _engine = this._engine(data),
+              { _calls, options } = this,
               c = {};
 
-            // store call
-            data.cid = _calls.store(c);
-            // check arguments
-            data.args = _calls.toArguments(data.args);
             // to check if target alive
             if (options.timeout) data.receipt = true;
 
             // post
-            engine.postMessage(data);
+            _engine.postMessage(_calls.toRequest(data, c));
 
             // to return result
             c.onresponse = ({ cid, result, error }) => {
               c.onreceipt instanceof Function && c.onreceipt();
-              // remove call
-              _calls.delete(cid);
-              // promise's time
-              !error ? resolve(_calls.fromResult(result)) : reject(error);
+              !error
+                ? resolve(_calls.fromResponse({ cid, result }))
+                : reject(error);
             };
 
+            // check no target
             if (options.timeout) {
-              // to check no target
-              const timer = setTimeout(
-                () =>
-                  // @ts-ignore
-                  c.onresponse({
-                    error: new Error(
-                      `Timeout on request ${data.method} in ${data.target}`
-                    )
-                  }),
-                options.timeout
-              );
-              c.onreceipt = () => {
-                clearTimeout(timer);
-              };
+              const timer = setTimeout(() => {
+                reject(
+                  new Error(
+                    `Timeout on request ${data.method} in ${data.target}`
+                  )
+                );
+              }, options.timeout);
+              // alive
+              c.onreceipt = () => clearTimeout(timer);
             }
           });
 

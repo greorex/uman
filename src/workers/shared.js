@@ -50,22 +50,29 @@ class Adapter {
  * unit base for shared worker script file
  */
 export class UnitSharedWorkerSelf extends UnitWorkerSelf {
-  constructor(engine = self) {
-    super(new Adapter(engine));
+  constructor(engine = new Adapter(self)) {
+    super(engine);
+
+    // active
+    this.engine = null;
+
+    // proper engine
+    this._engine = data => {
+      if (data.engine) this.engine = data.engine;
+      return this.engine ? this.engine : engine;
+    };
   }
 
   async _onterminate() {
+    // active engine
+    const engine = this.engine;
+    // stop
     await super._onterminate();
-
-    // update clients
-    if (arguments.length) {
-      // the last has to be the engine
-      const port = arguments[arguments.length - 1];
-      if (port && port instanceof MessagePort) {
-        clientsList = clientsList.filter(c => c !== port);
-        // no clients, terminate
-        if (!clientsList.length) close();
-      }
+    // update list
+    if (engine) {
+      clientsList = clientsList.filter(c => c !== engine);
+      // no clients, terminate
+      if (!clientsList.length) close();
     }
   }
 }

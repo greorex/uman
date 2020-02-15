@@ -166,4 +166,29 @@ export class UnitCallsEngine extends Map {
   fromArguments(args) {
     return this.mapArguments(args, a => this.fromResult(a));
   }
+
+  toRequest({ args, ...rest }, c) {
+    return {
+      ...rest,
+      cid: this.store(c),
+      args: this.toArguments(args)
+    };
+  }
+
+  fromResponse({ cid, result }) {
+    this.delete(cid);
+    return this.fromResult(result);
+  }
+
+  async response({ args, ...rest }, handler) {
+    return this.toResult(
+      await this._oncall(
+        {
+          ...rest,
+          args: this.fromArguments(args)
+        },
+        handler
+      )
+    );
+  }
 }
