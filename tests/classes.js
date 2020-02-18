@@ -74,7 +74,7 @@ export class Main extends UnitMain {
   }
 
   async testMisconception(arr) {
-    const object = new TestsObject();
+    const object = await this.units.tests.TestsObject();
     this.units.one.on("testMisconception", () => {
       this.units.post("log", "main.units.one.ontestMisconception");
     });
