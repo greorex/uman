@@ -142,7 +142,11 @@ export class UnitCallsEngine extends Map {
     // plain objects
     else if (
       args instanceof Object &&
+<<<<<<< HEAD
       Object.getPrototypeOf(args) === Object.prototype
+=======
+      Object.prototype.toString.call(args) === "[object Object]"
+>>>>>>> master
     ) {
       const r = {};
       for (let [key, a] of Object.entries(args))

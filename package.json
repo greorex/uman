@@ -1,6 +1,10 @@
 {
   "name": "uman",
+<<<<<<< HEAD
   "version": "0.7.3",
+=======
+  "version": "0.7.2",
+>>>>>>> master
   "main": "./dist/uman.js",
   "module": "./dist/uman.esm.js",
   "source": "./src/index.js",
