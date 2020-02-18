@@ -85,8 +85,8 @@ export default Unit.instance(
       // super test
       result = await one.testMisconception(object, one);
       if (!(result instanceof Object)) return "failed";
-      result = await result.one.sum(arr);
-      if (result !== pureSum(arr)) return "failed";
+      if ((await result.one.sum(arr)) !== (await result.object.sum(arr)))
+        return "failed";
 
       return "passed";
     }

@@ -84,17 +84,29 @@ export class UnitCallsEngine extends Map {
   }
 
   object(reference) {
-    if (reference[UNIT]) return this._handler.units[reference[UNIT]];
-    if (reference[OBJECT]) return new UnitObjectProxy(reference, this);
-    if (reference[FUNCTION])
-      return (...args) => {
-        this._redispatch({
-          type: REQUEST,
-          target: reference.owner,
-          reference,
-          args
-        });
-      };
+    // as object
+    if (reference[OBJECT]) {
+      return reference.owner === this._handler.name
+        ? this.get(reference[OBJECT])
+        : new UnitObjectProxy(reference, this);
+    }
+    // as function
+    if (reference[FUNCTION]) {
+      return reference.owner === this._handler.name
+        ? this.get(reference[FUNCTION])
+        : (...args) => {
+            this._redispatch({
+              type: REQUEST,
+              target: reference.owner,
+              reference,
+              args
+            });
+          };
+    }
+    // as unit
+    if (reference[UNIT]) {
+      return this._handler.units[reference[UNIT]];
+    }
   }
 
   _oncall(data, handler) {
@@ -130,7 +142,7 @@ export class UnitCallsEngine extends Map {
     // plain objects
     else if (
       args instanceof Object &&
-      Object.prototype.toString.call(args) === "[object Object]"
+      Object.getPrototypeOf(args) === Object.prototype
     ) {
       const r = {};
       for (let [key, a] of Object.entries(args))
@@ -154,9 +166,12 @@ export class UnitCallsEngine extends Map {
   }
 
   fromResult(r) {
-    return r instanceof Object && (r[OBJECT] || r[FUNCTION] || r[UNIT])
-      ? this.object(r)
-      : this.fromArguments(r);
+    if (r instanceof Object) {
+      const o = this.object(r);
+      if (o) return o;
+    }
+
+    return this.fromArguments(r);
   }
 
   toArguments(args) {
