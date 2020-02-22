@@ -19,38 +19,56 @@ const REQUEST = MessageType.REQUEST;
 const ALL = TargetType.ALL;
 
 /**
- * Units proxy target engine
+ * Units proxy base
  */
-export class UnitsProxyTarget extends UnitEventEmitter {
+class UnitsProxyBase extends UnitEventEmitter {
   constructor(handler, target) {
     super();
 
-    this._target = target;
+    // no then function
+    // if promise check
+    this.then = undefined;
 
+    // no toJSON
+    this.toJSON = undefined;
+
+    // 1. unit.units.post(method, ...args) -> to all units
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
       handler._redispatch({
         type: EVENT,
-        target,
+        target: target,
         sender: handler.name,
         method,
         args
       });
+  }
+}
+
+/**
+ * Units proxy target engine
+ */
+export class UnitsProxyTarget extends UnitsProxyBase {
+  constructor(handler, target) {
+    super(handler, target);
+
+    this._target = target;
+
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(...args)
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        // if own asked, 'onmethod'
-        if (prop in t) return Reflect.get(t, prop, receiver);
-        // request method
-        return (...args) =>
-          handler._redispatch({
-            type: REQUEST,
-            target,
-            method: prop,
-            args
-          });
-      }
+      get: (t, prop, receiver) =>
+        prop in t
+          ? // if own asked, 'onmethod'
+            Reflect.get(t, prop, receiver)
+          : // request method
+            (...args) =>
+              handler._redispatch({
+                type: REQUEST,
+                target,
+                method: prop,
+                args
+              })
     });
   }
 }
@@ -58,19 +76,9 @@ export class UnitsProxyTarget extends UnitEventEmitter {
 /**
  * Units fast access to other units
  */
-export class UnitsProxy extends UnitEventEmitter {
+export class UnitsProxy extends UnitsProxyBase {
   constructor(handler) {
-    super();
-
-    // 1. unit.units.post(method, ...args) -> to all units
-    this.post = (method, ...args) =>
-      handler._redispatch({
-        type: EVENT,
-        target: ALL,
-        sender: handler.name,
-        method,
-        args
-      });
+    super(handler, ALL);
 
     // const other = unit.units.other;
     return new Proxy(this, {

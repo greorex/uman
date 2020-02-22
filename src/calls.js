@@ -17,193 +17,240 @@ import { UnitsProxyTarget } from "./proxy";
 // locals
 const REQUEST = MessageType.REQUEST;
 
-// referencies
+// reference
+const REFERENCE = "_ref";
+// types
 const OBJECT = "_o";
 const FUNCTION = "_f";
 const UNIT = "_u";
+const TRANSFERABLE = "_t";
+
+/**
+ * creates reference object
+ */
+const Reference = ({ type, id, owner = null }) => {
+  const r = {
+    type: type,
+    id
+  };
+  if (owner) r.owner = owner;
+  return {
+    [REFERENCE]: r
+  };
+};
 
 /**
  * object proxy
  */
 class UnitObjectProxy {
-  constructor(reference, handler) {
-    this._reference = reference;
+  constructor(ref, handler) {
+    this._ref = ref;
 
     // no then function
     // if promise check
     this.then = undefined;
 
+    // no toJSON
+    this.toJSON = undefined;
+
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        // own
-        if (prop in t) return Reflect.get(t, prop, receiver);
-        // unit knows
-        return (...args) =>
-          handler._redispatch({
-            type: REQUEST,
-            target: reference.owner,
-            reference,
-            method: prop,
-            args
-          });
-      }
+      get: (t, prop, receiver) =>
+        prop in t
+          ? // if own asked
+            Reflect.get(t, prop, receiver)
+          : // unit knows
+            (...args) =>
+              handler._redispatch({
+                type: REQUEST,
+                target: ref.owner,
+                handler: ref,
+                method: prop,
+                args
+              })
     });
+  }
+}
+
+/**
+ * cache
+ */
+class CallsCache {
+  constructor() {
+    this._cache = Object.create(null);
+  }
+
+  set(key, value) {
+    this._cache[key] = value;
+  }
+
+  get(key) {
+    return this._cache[key];
+  }
+
+  delete(key) {
+    delete this._cache[key];
   }
 }
 
 /**
  * engine to execute calls with built in cache
  */
-export class UnitCallsEngine extends Map {
+export class UnitCallsEngine extends CallsCache {
   constructor(handler) {
     super();
 
-    // private
+    // key
     let _n = 0;
-
-    // returns the key
     this.store = value => {
-      ++_n;
+      _n++;
       this.set(_n, value);
       return _n;
     };
 
     // redispatcher
     this._handler = handler;
-    this._redispatch = data => handler._redispatch(data);
   }
 
   cache(handler, type) {
-    const owner = this._handler.name,
-      id = this.store(handler);
-    // reference
-    return {
-      [type]: id,
-      owner
-    };
-  }
-
-  object(reference) {
-    // as object
-    if (reference[OBJECT]) {
-      return reference.owner === this._handler.name
-        ? this.get(reference[OBJECT])
-        : new UnitObjectProxy(reference, this);
-    }
-    // as function
-    if (reference[FUNCTION]) {
-      return reference.owner === this._handler.name
-        ? this.get(reference[FUNCTION])
-        : (...args) => {
-            this._redispatch({
-              type: REQUEST,
-              target: reference.owner,
-              reference,
-              args
-            });
-          };
-    }
-    // as unit
-    if (reference[UNIT]) {
-      return this._handler.units[reference[UNIT]];
-    }
+    return Reference({
+      type,
+      id: this.store(handler),
+      owner: this._handler.name
+    });
   }
 
   _oncall(data, handler) {
-    const { reference } = data;
+    const ref = data.handler;
+
     // default context
-    if (!(reference && reference.owner === handler.name))
+    if (!(ref && ref.owner === handler.name)) {
       return handler._oncall(data);
-    // object's
-    if (reference[OBJECT]) {
-      const o = this.get(reference[OBJECT]);
-      const { method } = data;
-      if (!(o instanceof UnitObject) || !(method in o))
-        throw new Error(`Wrong object for ${method} in ${reference.owner}`);
-      return o[method](...data.args);
-    }
-    // function's
-    if (reference[FUNCTION]) {
-      const f = this.get(reference[FUNCTION]);
-      if (!(f instanceof Function))
-        throw new Error(`Wrong function reference in ${reference.owner}`);
-      return f(...data.args);
-    }
-  }
-
-  mapArguments(args, f) {
-    // one level only
-    // array
-    if (Array.isArray(args)) {
-      return args.map(a =>
-        a instanceof Object && !Array.isArray(a) ? f(a) : a
-      );
-    }
-    // plain objects
-    else if (
-      args instanceof Object &&
-      Object.getPrototypeOf(args) === Object.prototype
-    ) {
-      const r = {};
-      for (let [key, a] of Object.entries(args))
-        r[key] = a instanceof Object && !Array.isArray(a) ? f(a) : a;
-      return r;
-    }
-    // as is
-    return args;
-  }
-
-  toResult(r) {
-    return r instanceof UnitObject
-      ? this.cache(r, OBJECT)
-      : r instanceof Function
-      ? this.cache(r, FUNCTION)
-      : r instanceof UnitsProxyTarget
-      ? { [UNIT]: r._target }
-      : r instanceof UnitObjectProxy
-      ? r._reference
-      : this.toArguments(r);
-  }
-
-  fromResult(r) {
-    if (r instanceof Object) {
-      const o = this.object(r);
-      if (o) return o;
     }
 
-    return this.fromArguments(r);
+    // by reference
+    const { type, id, owner } = ref;
+
+    switch (type) {
+      case OBJECT: {
+        const { method } = data,
+          o = this.get(id);
+        if (!(o instanceof UnitObject && method in o)) {
+          throw new Error(`Wrong object for ${method} in ${owner}`);
+        }
+        return o[method](...data.args);
+      }
+
+      case FUNCTION: {
+        const f = this.get(id);
+        if (typeof f !== "function") {
+          throw new Error(`Wrong function reference in ${owner}`);
+        }
+        return f(...data.args);
+      }
+    }
   }
 
-  toArguments(args) {
-    return this.mapArguments(args, a => this.toResult(a));
+  toMessage(data) {
+    const transfer = [],
+      message = JSON.stringify(data, (_, v) => {
+        switch (typeof v) {
+          case "function":
+            return this.cache(v, FUNCTION);
+
+          case "object":
+            if (v instanceof UnitObject) {
+              return this.cache(v, OBJECT);
+            }
+            if (v instanceof UnitsProxyTarget) {
+              return Reference({
+                type: UNIT,
+                id: v._target
+              });
+            }
+            if (v instanceof UnitObjectProxy) {
+              return Reference(v._ref);
+            }
+
+            // transfer?
+            if (
+              v instanceof ArrayBuffer ||
+              v instanceof ImageBitmap ||
+              v instanceof OffscreenCanvas
+            ) {
+              transfer.push(v);
+              return Reference({
+                type: TRANSFERABLE,
+                id: transfer.length
+              });
+            }
+        }
+        // as is
+        return v;
+      });
+
+    // as args
+    return !transfer.length
+      ? [message]
+      : [
+          {
+            message,
+            transfer
+          },
+          transfer
+        ];
   }
 
-  fromArguments(args) {
-    return this.mapArguments(args, a => this.fromResult(a));
-  }
+  fromMessage(data) {
+    let transferables = null;
 
-  toRequest({ args, ...rest }, c) {
-    return {
-      ...rest,
-      cid: this.store(c),
-      args: this.toArguments(args)
-    };
-  }
+    if (typeof data !== "string") {
+      const { message, transfer } = data;
+      if (!message) {
+        // as is
+        return data;
+      }
+      // transfer?
+      data = message;
+      transferables = transfer;
+    }
 
-  fromResponse({ cid, result }) {
-    this.delete(cid);
-    return this.fromResult(result);
-  }
+    const handler = this._handler;
 
-  async response({ args, ...rest }, handler) {
-    return this.toResult(
-      await this._oncall(
-        {
-          ...rest,
-          args: this.fromArguments(args)
-        },
-        handler
-      )
-    );
+    return JSON.parse(data, (_, v) => {
+      if (typeof v === "object") {
+        const ref = v[REFERENCE];
+        if (ref) {
+          const { type, id, owner } = ref;
+
+          switch (type) {
+            case OBJECT:
+              return owner === handler.name
+                ? this.get(id)
+                : new UnitObjectProxy(ref, handler);
+
+            case FUNCTION:
+              return owner === handler.name
+                ? this.get(id)
+                : (...args) =>
+                    handler._redispatch({
+                      type: REQUEST,
+                      target: owner,
+                      handler: ref,
+                      args
+                    });
+
+            case UNIT:
+              return handler.units[id];
+
+            case TRANSFERABLE:
+              if (transferables) {
+                return transferables[id - 1];
+              }
+          }
+        }
+      }
+      // as is
+      return v;
+    });
   }
 }

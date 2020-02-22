@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import { UnitWorkerSelf } from "./dedicated";
+import { UnitServiceWorkerSelf } from "./service";
 
 /**
  * list of clients
@@ -24,7 +24,9 @@ class Adapter {
   constructor(engine) {
     // to all clients
     this.postMessage = (...args) => {
-      for (let port of clientsList) port.postMessage(...args);
+      for (let port of clientsList) {
+        port.postMessage(...args);
+      }
     };
 
     // new client
@@ -33,7 +35,7 @@ class Adapter {
 
       port.addEventListener("message", event => {
         // engine to reply
-        event.data && (event.data.engine = port);
+        event._engine = port;
         // @ts-ignore
         this.onmessage(event);
       });
@@ -49,20 +51,12 @@ class Adapter {
 /**
  * unit base for shared worker script file
  */
-export class UnitSharedWorkerSelf extends UnitWorkerSelf {
+export class UnitSharedWorkerSelf extends UnitServiceWorkerSelf {
   constructor(engine = new Adapter(self)) {
     super(engine);
-
-    // active
-    this.engine = null;
-
-    // proper engine
-    this._engine = data => {
-      if (data.engine) this.engine = data.engine;
-      return this.engine ? this.engine : engine;
-    };
   }
 
+  // override
   async _onterminate() {
     // active engine
     const engine = this.engine;
@@ -72,7 +66,9 @@ export class UnitSharedWorkerSelf extends UnitWorkerSelf {
     if (engine) {
       clientsList = clientsList.filter(c => c !== engine);
       // no clients, terminate
-      if (!clientsList.length) close();
+      if (!clientsList.length) {
+        close();
+      }
     }
   }
 }

@@ -32,9 +32,6 @@ export class UnitBase extends UnitEventEmitter {
     // manager engine
     this.name = "";
     this.units = new UnitsProxy(this);
-    this._redispatch = data => this._dispatch(data);
-
-    // call engine
     this._calls = new UnitCallsEngine(this);
 
     // no then function
@@ -43,18 +40,18 @@ export class UnitBase extends UnitEventEmitter {
 
     // proxy engine
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        // own asked
-        if (prop in t) return Reflect.get(t, prop, receiver);
-        // method asked
-        return (...args) =>
-          receiver._dispatch({
-            type: REQUEST,
-            target: receiver.name,
-            method: prop,
-            args
-          });
-      }
+      get: (t, prop, receiver) =>
+        prop in t
+          ? // if own asked
+            Reflect.get(t, prop, receiver)
+          : // request method
+            (...args) =>
+              receiver._dispatch({
+                type: REQUEST,
+                target: receiver.name,
+                method: prop,
+                args
+              })
     });
   }
 
@@ -65,13 +62,15 @@ export class UnitBase extends UnitEventEmitter {
   _onevent(data) {
     const { method, args, sender } = data;
     // new routine
-    if (!sender)
+    if (!sender) {
       // sibscribers of this
       this.fire(method, ...args);
-    else {
+    } else {
       const p = this.units[sender];
-      // sibscribers of sender
-      if (p) p.fire(method, ...args);
+      // sibscribers of sender?
+      if (p) {
+        p.fire(method, ...args);
+      }
       // sibscribers of units
       this.units.fire(method, sender, ...args);
     }
@@ -79,8 +78,9 @@ export class UnitBase extends UnitEventEmitter {
 
   _oncall(data) {
     const { method, args } = data;
-    if (!(method in this))
+    if (!(method in this)) {
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
+    }
     // may be async as well
     return this[method](...args);
   }
@@ -93,5 +93,9 @@ export class UnitBase extends UnitEventEmitter {
       case EVENT:
         this._onevent(data);
     }
+  }
+
+  _redispatch(data) {
+    return this._dispatch(data);
   }
 }

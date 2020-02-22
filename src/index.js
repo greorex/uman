@@ -55,6 +55,7 @@ export { UnitMain } from "./main";
 export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
 export { default as CriticalSection } from "./critical";
+export { default as Throttler } from "./throttler";
 export { UnitLoader };
 // adapters
 export { UnitWorker, UnitSharedWorker, UnitServiceWorker };

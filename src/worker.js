@@ -18,6 +18,7 @@ const EVENT = MessageType.EVENT;
 const REQUEST = MessageType.REQUEST;
 const RESPONSE = MessageType.RESPONSE;
 const RECEIPT = MessageType.RECEIPT;
+const SIGNATURE = "uman";
 
 /**
  * unit worker communication engine
@@ -36,10 +37,16 @@ export class UnitWorkerEngine extends UnitBase {
       throw new Error(error);
     };
     engine.onmessage = event => {
-      const { data } = event;
+      const data = this.fromEvent(event);
 
-      // is this our message?
-      switch (data instanceof Object && data.type) {
+      if (!data) {
+        // call standard listener
+        // @ts-ignore
+        return typeof this.onmessage === "function" && this.onmessage(event);
+      }
+
+      // uman's
+      switch (data.type) {
         case EVENT: {
           return this._onevent(data);
         }
@@ -53,16 +60,20 @@ export class UnitWorkerEngine extends UnitBase {
           if (data.receipt) {
             // alive
             response.type = RECEIPT;
-            _engine.postMessage(response);
+            this.toMessage(response, _engine);
           }
 
-          // call
-          response.type = RESPONSE;
-          return this._calls
-            .response(data, this)
-            .then(result => (response.result = result))
-            .catch(error => (response.error = error))
-            .finally(() => _engine.postMessage(response));
+          return (async () => {
+            // call
+            try {
+              response.result = await this._calls._oncall(data, this);
+            } catch (error) {
+              response.error = error;
+            }
+
+            response.type = RESPONSE;
+            this.toMessage(response, _engine);
+          })();
         }
 
         case RESPONSE: {
@@ -72,58 +83,75 @@ export class UnitWorkerEngine extends UnitBase {
 
         case RECEIPT: {
           const c = this._calls.get(data.cid);
-          return c && c.onreceipt instanceof Function && c.onreceipt();
+          return c && c.onreceipt === "function" && c.onreceipt();
         }
       }
-
-      // call standard listener
-      // @ts-ignore
-      this.onmessage instanceof Function && this.onmessage(event);
     };
+  }
 
-    // override
-    this._dispatch = data => {
-      switch (data.type) {
-        case REQUEST:
-          // post and
-          return new Promise((resolve, reject) => {
-            const _engine = this._engine(data),
-              { _calls, options } = this,
-              c = {};
+  // override
+  _dispatch(data) {
+    switch (data.type) {
+      case REQUEST:
+        // post and
+        return new Promise((resolve, reject) => {
+          const _engine = this._engine(data),
+            { _calls, options } = this,
+            c = {};
 
-            // to check if target alive
-            if (options.timeout) data.receipt = true;
+          // to check if target alive
+          if (options.timeout) {
+            data.receipt = true;
+          }
 
-            // post
-            _engine.postMessage(_calls.toRequest(data, c));
+          // id
+          data.cid = _calls.store(c);
 
-            // to return result
-            c.onresponse = ({ cid, result, error }) => {
-              c.onreceipt instanceof Function && c.onreceipt();
-              !error
-                ? resolve(_calls.fromResponse({ cid, result }))
-                : reject(error);
-            };
+          // post
+          this.toMessage(data, _engine);
 
-            // check no target
-            if (options.timeout) {
-              const timer = setTimeout(() => {
-                reject(
-                  new Error(
-                    `Timeout on request ${data.method} in ${data.target}`
-                  )
-                );
-              }, options.timeout);
-              // alive
-              c.onreceipt = () => clearTimeout(timer);
-            }
-          });
+          // to return result
+          c.onresponse = ({ cid, result, error }) => {
+            c.onreceipt && c.onreceipt();
+            _calls.delete(cid);
+            !error ? resolve(result) : reject(error);
+          };
 
-        case EVENT:
-          // just post
-          engine.postMessage(data);
-      }
-    };
+          // check no target
+          if (options.timeout) {
+            const timer = setTimeout(() => {
+              reject(
+                new Error(`Timeout on request ${data.method} in ${data.target}`)
+              );
+            }, options.timeout);
+            // alive
+            c.onreceipt = () => clearTimeout(timer);
+          }
+        });
+
+      case EVENT:
+        // just post
+        this.toMessage(data);
+    }
+  }
+
+  toMessage(data, engine = null) {
+    const signed = {
+        [SIGNATURE]: data
+      },
+      args = !data.error ? this._calls.toMessage(signed) : [signed];
+
+    if (!engine) {
+      engine = this._engine(data);
+    }
+
+    engine.postMessage(...args);
+  }
+
+  fromEvent(event) {
+    const signed = this._calls.fromMessage(event.data);
+    // unsign
+    return signed ? signed[SIGNATURE] : undefined;
   }
 
   // to self and back

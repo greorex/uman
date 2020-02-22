@@ -25,20 +25,24 @@ class Adapter {
     // to all controlled clients
     this.postMessage = (...args) => {
       engine.clients.matchAll().then(clients => {
-        for (let client of clients) client.postMessage(...args);
+        for (let client of clients) {
+          client.postMessage(...args);
+        }
       });
     };
 
     engine.addEventListener("message", event => {
       const promise = engine.clients.get(event.source.id).then(client => {
         // engine to reply
-        event.data && (event.data.engine = client);
+        event._engine = client;
         // @ts-ignore
         this.onmessage(event);
       });
 
       // extends life of
-      if (event.waitUntil) event.waitUntil(promise);
+      if (event.waitUntil) {
+        event.waitUntil(promise);
+      }
     });
   }
 }
@@ -53,10 +57,17 @@ export class UnitServiceWorkerSelf extends UnitWorkerSelf {
     // active
     this.engine = null;
 
+    // override
     // proper engine
-    this._engine = data => {
-      if (data.engine) this.engine = data.engine;
-      return this.engine ? this.engine : engine;
-    };
+    this._engine = data => (data.engine ? data.engine : engine);
+  }
+
+  // override
+  fromEvent(event) {
+    const data = super.fromEvent(event);
+    if (data) {
+      this.engine = data.engine = event._engine;
+    }
+    return data;
   }
 }

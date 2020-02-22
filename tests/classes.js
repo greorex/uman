@@ -86,6 +86,29 @@ export class Main extends UnitMain {
     return result;
   }
 
+  async testTransferables(arr) {
+    const arrBuf = new ArrayBuffer(arr.length * 4);
+    // copy arr
+    let i32a = new Int32Array(arrBuf);
+    for (let i = 0; i < arr.length; i++) i32a[i] = arr[i];
+    // send 2 buffers
+    let result = await this.units.tests.testTransferables(
+      arrBuf,
+      new ArrayBuffer(arr.length * 16)
+    );
+    // has to be 0 after
+    if (arrBuf.byteLength) return "failed";
+    // and back
+    i32a = new Int32Array(result[0]);
+    // check second
+    if (result[1].byteLength !== arr.length * 16) return "failed";
+    // sum
+    result = 0;
+    for (let i = 0; i < i32a.length; i++) result += i32a[i];
+
+    return result === pureSum(arr) ? "passed" : "failed";
+  }
+
   TestsObject() {
     return new TestsObject();
   }

@@ -17,19 +17,20 @@ import { UnitBase } from "./base";
  */
 const loadersQueue = [
   // function
-  params => {
-    const { loader } = params;
-    if (loader instanceof Function) return loader();
+  ({ loader }) => {
+    if (typeof loader === "function") {
+      return loader();
+    }
   },
   // promise
-  params => {
-    const { loader } = params;
-    if (loader instanceof Promise) return loader;
+  ({ loader }) => {
+    if (loader instanceof Promise) {
+      return loader;
+    }
   },
   // module
-  params => {
-    let { loader, args } = params;
-    if (loader && loader.default instanceof Function) {
+  ({ loader, args }) => {
+    if (loader && typeof loader.default === "function") {
       // has to be export default class
       loader = loader.default;
       if (loader && loader.constructor) {
@@ -53,9 +54,13 @@ export class UnitLoader {
     for (let f of loadersQueue) {
       const unit = await f({ loader, name, ...rest });
       // loaded?
-      if (unit instanceof UnitBase) return unit;
+      if (unit instanceof UnitBase) {
+        return unit;
+      }
       // try next
-      if (unit) loader = unit;
+      if (unit) {
+        loader = unit;
+      }
     }
 
     throw new Error(`Wrong class of unit: ${name}`);
@@ -67,9 +72,11 @@ export class UnitLoader {
 
   static register(loader) {
     if (Array.isArray(loader)) {
-      for (let l of loader) UnitLoader.register(l);
-    } else {
-      if (!loadersQueue.includes(loader)) loadersQueue.push(loader);
+      for (let l of loader) {
+        UnitLoader.register(l);
+      }
+    } else if (!loadersQueue.includes(loader)) {
+      loadersQueue.push(loader);
     }
   }
 }

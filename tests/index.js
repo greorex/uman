@@ -92,6 +92,11 @@ describe(`${name}, v${version}`, () => {
     expect(result).toEqual("passed");
   });
 
+  test("transferables", async () => {
+    const result = await main.testTransferables(testArray);
+    expect(result).toEqual("passed");
+  });
+
   test("unit 'tests' terminated", async () => {
     await main.terminate("tests");
     // check real list

@@ -91,6 +91,10 @@ export default Unit.instance(
       return "passed";
     }
 
+    testTransferables(arrBuf1, arrBuf2) {
+      return [arrBuf1, arrBuf2];
+    }
+
     TestsObject() {
       return new TestsObject();
     }
