@@ -12,10 +12,10 @@
 // TODO - add lazy loading (100%)
 // TODO - add Unit auto class trigger (100%)
 // TODO - split by files (100%)
+// TODO - add transferable objects (100%)
+// TODO - add service worker support (100%)
 // TODO - add timeout for request (80%, if long calls failed?)
-// TODO - add transferable objects (80%, through proxies?)
 // TODO - add args and return proxies (80%, cleanup?)
-// TODO - add service worker support (80%, tests)
 // TODO - add units dependency (0%)
 // TODO - add node.js support (0%)
 // TODO - add communication with server units (0%)
@@ -29,16 +29,16 @@ import { UnitLoader } from "./loader";
 
 // register workers
 // dedicated
-if (typeof Worker !== "undefined") {
+if (typeof Worker === "function") {
   UnitLoader.register(UnitWorker.loader());
 }
 // shared
 // @ts-ignore
-if (typeof SharedWorker !== "undefined") {
+if (typeof SharedWorker === "function") {
   UnitLoader.register(UnitSharedWorker.loader());
 }
 // service
-if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+if (navigator && "serviceWorker" in navigator) {
   UnitLoader.register(UnitServiceWorker.loader());
 }
 
@@ -48,7 +48,6 @@ export { version, name } from "./../package.json";
 // basic level
 export { UnitObject } from "./object";
 export { Unit } from "./unit";
-export { UnitsManager } from "./manager";
 export { UnitMain } from "./main";
 
 // expert level
@@ -56,6 +55,7 @@ export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
+export { UnitsManager } from "./manager";
 export { UnitLoader };
 // adapters
 export { UnitWorker, UnitSharedWorker, UnitServiceWorker };

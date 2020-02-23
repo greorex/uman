@@ -75,15 +75,13 @@ export class UnitsManager extends Unit {
         throw new Error(`Unit ${loader} already exists`);
       }
       // check name (simple)
-      if (typeof name !== "string") {
-        switch (name) {
-          // !methods
-          case "then":
-          case "post":
-          case "fire":
-          case "on":
-            throw new Error(`Wrong unit name: ${name}`);
-        }
+      switch (name) {
+        // !methods
+        case "then":
+        case "post":
+        case "fire":
+        case "on":
+          throw new Error(`Wrong unit name: ${name}`);
       }
       // unit isn't lazy?
       if (loader instanceof UnitBase) {

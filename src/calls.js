@@ -13,6 +13,7 @@
 import { MessageType } from "./enums";
 import { UnitObject } from "./object";
 import { UnitsProxyTarget } from "./proxy";
+import { ab2str, str2ab } from "./buffer";
 
 // locals
 const REQUEST = MessageType.REQUEST;
@@ -175,7 +176,8 @@ export class UnitCallsEngine extends CallsCache {
             if (
               v instanceof ArrayBuffer ||
               v instanceof ImageBitmap ||
-              v instanceof OffscreenCanvas
+              (typeof OffscreenCanvas === "function" &&
+                v instanceof OffscreenCanvas)
             ) {
               transfer.push(v);
               return Reference({
@@ -184,39 +186,28 @@ export class UnitCallsEngine extends CallsCache {
               });
             }
         }
+
         // as is
         return v;
       });
 
+    // to transferable
+    transfer.unshift(str2ab(message));
+
     // as args
-    return !transfer.length
-      ? [message]
-      : [
-          {
-            message,
-            transfer
-          },
-          transfer
-        ];
+    return [transfer, transfer];
   }
 
   fromMessage(data) {
-    let transferables = null;
+    // as is?
+    if (!(data.length && Array.isArray(data) && data[0] instanceof ArrayBuffer))
+      return data;
 
-    if (typeof data !== "string") {
-      const { message, transfer } = data;
-      if (!message) {
-        // as is
-        return data;
-      }
-      // transfer?
-      data = message;
-      transferables = transfer;
-    }
+    const handler = this._handler,
+      { name, units } = handler;
 
-    const handler = this._handler;
-
-    return JSON.parse(data, (_, v) => {
+    // from transferable
+    return JSON.parse(ab2str(data[0]), (_, v) => {
       if (typeof v === "object") {
         const ref = v[REFERENCE];
         if (ref) {
@@ -224,12 +215,12 @@ export class UnitCallsEngine extends CallsCache {
 
           switch (type) {
             case OBJECT:
-              return owner === handler.name
+              return owner === name
                 ? this.get(id)
                 : new UnitObjectProxy(ref, handler);
 
             case FUNCTION:
-              return owner === handler.name
+              return owner === name
                 ? this.get(id)
                 : (...args) =>
                     handler._redispatch({
@@ -240,15 +231,14 @@ export class UnitCallsEngine extends CallsCache {
                     });
 
             case UNIT:
-              return handler.units[id];
+              return units[id];
 
             case TRANSFERABLE:
-              if (transferables) {
-                return transferables[id - 1];
-              }
+              return data[id];
           }
         }
       }
+
       // as is
       return v;
     });

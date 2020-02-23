@@ -42,7 +42,7 @@ export class UnitWorkerEngine extends UnitBase {
       if (!data) {
         // call standard listener
         // @ts-ignore
-        return typeof this.onmessage === "function" && this.onmessage(event);
+        return this.onmessage && this.onmessage(event);
       }
 
       // uman's
@@ -83,7 +83,7 @@ export class UnitWorkerEngine extends UnitBase {
 
         case RECEIPT: {
           const c = this._calls.get(data.cid);
-          return c && c.onreceipt === "function" && c.onreceipt();
+          return c && c.onreceipt && c.onreceipt();
         }
       }
     };
