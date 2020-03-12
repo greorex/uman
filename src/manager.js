@@ -10,14 +10,11 @@
 
 // @ts-check
 
-import { TargetType } from "./enums";
+import { TargetType as TT } from "./enums";
 import { UnitBase } from "./base";
 import { UnitLoader } from "./loader";
 import { Unit } from "./unit";
 import CS from "./critical";
-
-// locals
-const ALL = TargetType.ALL;
 
 /**
  * units orchestration engine
@@ -37,7 +34,7 @@ export class UnitsManager extends Unit {
   async _redispatch(data) {
     const { target, sender } = data;
     switch (target) {
-      case ALL:
+      case TT.ALL:
         // to all loaded except sender
         for (let [name, unit] of Object.entries(this._units)) {
           if (name !== sender && unit instanceof UnitBase) {

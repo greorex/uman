@@ -20,24 +20,28 @@ const uint8 = new Uint8Array(8),
   view = new DataView(uint8.buffer);
 
 /**
- * streamed
+ * streamed interface
  */
 class Writer {
   constructor(littleEndian = true) {
     this.littleEndian = littleEndian;
+    this._ve = new ValueEncoder(this);
   }
 
-  write(byte) {
+  // to override
+
+  byte(byte) {
     return this;
   }
+
   bytes(data, length = 0) {
     return this;
   }
 
   // public
+
   int8(v) {
-    view.setInt8(0, v);
-    return this.write(uint8[0]);
+    return this.byte(v < 0 ? v + 256 : v);
   }
   uint16(v) {
     view.setUint16(0, v, this.littleEndian);
@@ -74,7 +78,7 @@ class Writer {
 
   // any json value
   value(value, replacer = null) {
-    return new ValueEncoder(this).encode(value, replacer);
+    return this._ve.encode(value, replacer);
   }
 }
 
@@ -95,12 +99,14 @@ export class BufferWriter extends Writer {
     // trancate?
     this._realloc(this.offset);
     // as is
-    return this._data.buffer;
+    return this.data.buffer;
   }
 
-  write(byte) {
+  // override
+
+  byte(byte) {
     this.resize(1);
-    this._data[this.offset++] = byte;
+    this.data[this.offset++] = byte;
     return this;
   }
 
@@ -109,10 +115,12 @@ export class BufferWriter extends Writer {
     this.resize(l);
     // faster than .set
     for (let i = 0; i < l; i++) {
-      this._data[this.offset++] = data[i];
+      this.data[this.offset++] = data[i];
     }
     return this;
   }
+
+  // public
 
   empty() {
     this.offset = 0;
@@ -135,7 +143,7 @@ export class BufferWriter extends Writer {
       // copy up to offset
       // faster than .set
       for (let i = this.offset - offset; i--; ) {
-        data[i] = this._data[offset + i];
+        data[i] = this.data[offset + i];
       }
     }
     // done
@@ -166,10 +174,10 @@ export class BufferWriter extends Writer {
   // private
 
   _realloc(size = 0) {
-    if (!size || size !== this.size) {
+    if (size !== this.size || !size) {
       // set it up
-      this._data = !this._data ? new Uint8Array(size) : this.copy(0, size);
-      this.size = this._data.length;
+      this.data = this.data ? this.copy(0, size) : new Uint8Array(size);
+      this.size = this.data.length;
     }
   }
 }
@@ -178,9 +186,6 @@ export class BufferWriter extends Writer {
  * JSON like object -> ArrayBuffer
  */
 export const json2ab = (value, replacer = null, littleEndian = true) => {
-  if (!(value && typeof value === "object")) {
-    throw new Error(`json2ab: value is not an object`);
-  }
   // encode
   return new BufferWriter(littleEndian).value(value, replacer).buffer;
 };

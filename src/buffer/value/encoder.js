@@ -21,7 +21,7 @@ const _isFinite = Number.isFinite,
   MIN_FLOAT32 = -MAX_FLOAT32;
 
 // to speed up?
-const cache = [];
+const keysCache = [];
 
 // encoders
 const NATIVE = false,
@@ -37,119 +37,99 @@ export class ValueEncoder {
       _number = v => {
         // as type
         if (v === 0) {
-          return out.write(VT.ZERO);
+          return out.byte(VT.ZERO);
         }
         // as integer 8|16|32
         if (!(v < -MAX_UINT32 || v > MAX_UINT32) && v === (v ^ 0)) {
-          // sign in type
           const negative = v < 0 ? ((v = -v), true) : false;
-          // 32
-          if (v > MAX_UINT16) {
-            return out.write(negative ? -VT.UINT32 : VT.UINT32).uint32(v);
-          }
-          // 16
-          if (v > MAX_UINT8) {
-            return out.write(negative ? -VT.UINT16 : VT.UINT16).uint16(v);
-          }
-          // 8
-          return out.write(negative ? -VT.UINT8 : VT.UINT8).write(v);
+          // sign in type
+          return v > MAX_UINT16
+            ? out.byte(negative ? VT.N_UINT32 : VT.UINT32).uint32(v)
+            : v > MAX_UINT8
+            ? out.byte(negative ? VT.N_UINT16 : VT.UINT16).uint16(v)
+            : out.byte(negative ? VT.N_UINT8 : VT.UINT8).byte(v);
         }
         // as float
         if (_isFinite(v)) {
-          // 64
-          if (v < MIN_FLOAT32 || v > MAX_FLOAT32) {
-            return out.write(VT.FLOAT64).float64(v);
-          }
-          // 32
-          return out.write(VT.FLOAT32).float32(v);
+          return v < MIN_FLOAT32 || v > MAX_FLOAT32
+            ? out.byte(VT.FLOAT64).float64(v)
+            : out.byte(VT.FLOAT32).float32(v);
         }
         // as type
-        return out.write(
+        return out.byte(
           v === Infinity ? VT.INFINITY : v === -Infinity ? -VT.INFINITY : VT.NAN
         );
       },
       _string = v => {
         if (!v.length) {
-          return out.write(VT.EMPTY);
+          return out.byte(VT.EMPTY);
         }
         // smart sized
         const bytes = _utf8(v),
           { length } = bytes;
-        if (length > MAX_UINT16) {
-          out.write(VT.STRING32).uint32(length);
-        } else if (length > MAX_UINT8) {
-          out.write(VT.STRING16).uint16(length);
-        } else {
-          out.write(VT.STRING8).write(length);
-        }
+        length > MAX_UINT16
+          ? out.byte(VT.STRING32).uint32(length)
+          : length > MAX_UINT8
+          ? out.byte(VT.STRING16).uint16(length)
+          : out.byte(VT.STRING8).byte(length);
+        // chars
         return out.bytes(bytes, length);
       },
-      _value = (value, _entry) => {
-        switch (typeof value) {
+      _value = (v, replacer) => {
+        switch (typeof v) {
           case "object":
-            if (value === null) {
-              return out.write(VT.NULL);
-            } else if (Array.isArray(value)) {
-              out.write(VT.ARRAY);
-              for (let i = 0, l = value.length; i < l; i++) {
-                _entry(i, value[i]);
+            if (v === null) {
+              return out.byte(VT.NULL);
+            } else if (Array.isArray(v)) {
+              out.byte(VT.ARRAY);
+              for (let i = 0, l = v.length; i < l; i++) {
+                _entry(i, v[i], replacer);
               }
             } else {
-              out.write(VT.OBJECT);
-              for (let i in value) {
-                _entry(i, value[i]);
+              out.byte(VT.OBJECT);
+              for (let i in v) {
+                _entry(i, v[i], replacer, true);
               }
             }
-            return out.write(VT.END);
+            return out.byte(VT.END);
           case "string":
-            return _string(value);
+            return _string(v);
           case "number":
-            return _number(value);
+            return _number(v);
           case "boolean":
-            return out.write(value ? VT.TRUE : VT.FALSE);
+            return out.byte(v ? VT.TRUE : VT.FALSE);
           case "bigint":
-            return out.write(VT.BIGINT).bigInt(value);
+            return out.byte(VT.BIGINT).bigInt(v);
           case "undefined":
-            return out.write(VT.UNDEFINED);
+            return out.byte(VT.UNDEFINED);
         }
-      };
-
-    // public
-    this.encode = (value, replacer = null) => {
-      if (replacer) {
-        value = replacer("", value);
-      }
-
-      const _entry = (k, v) => {
+      },
+      _entry = (k, v, replacer, property = false) => {
         if (replacer) {
           v = replacer(k, v);
         }
-        // means object
-        if (typeof k === "string") {
+        if (property) {
           // skip undefined
           if (v === undefined) {
             return;
           }
           // key
           if (k.length < 64) {
-            let c = cache[k];
+            let c = keysCache[k];
             if (!c) {
               c = _utf8(k);
               c.unshift(VT.STRING8, c.length);
-              cache[k] = c;
+              keysCache[k] = c;
             }
             out.bytes(c, c.length);
           } else {
             _string(k);
           }
         }
-
-        // recursively
-        _value(v, _entry);
+        return _value(v, replacer);
       };
 
-      // run
-      return _value(value, _entry);
-    };
+    // public
+    this.encode = (value, replacer = null) => _entry("", value, replacer);
   }
 }

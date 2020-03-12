@@ -18,21 +18,15 @@ import options from "../options";
  */
 class Adapter {
   constructor(worker) {
-    const _postMessage = worker.controller.postMessage;
-    if (typeof _postMessage !== "function") {
+    const controller = worker.controller;
+    if (!(controller && controller.postMessage === "function")) {
       throw new Error(`There is no 'postMessage' in ${worker}`);
     }
-    this.postMessage = function() {
-      _postMessage.apply(worker.controller, arguments);
-    };
-    worker.addEventListener("message", event => {
-      // @ts-ignore
-      this.onmessage(event);
-    });
-    worker.addEventListener("error", error => {
-      // @ts-ignore
-      this.onerror(error);
-    });
+    this.postMessage = (...args) => controller.postMessage(...args);
+    // @ts-ignore
+    worker.addEventListener("message", event => this.onmessage(event));
+    // @ts-ignore
+    worker.addEventListener("error", error => this.onerror(error));
   }
 
   // absent

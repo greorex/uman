@@ -58,10 +58,10 @@ class UnitObjectProxy {
     this.toJSON = undefined;
 
     return new Proxy(this, {
-      get: (t, prop, receiver) =>
+      get: (t, prop) =>
         prop in t
           ? // if own asked
-            Reflect.get(t, prop, receiver)
+            t[prop]
           : // unit knows
             (...args) =>
               handler._redispatch({
@@ -107,13 +107,12 @@ export default class extends Map {
 
     switch (type) {
       case RT.OBJECT: {
-        const { method } = data,
-          o = this.get(id),
-          f = o[method];
-        if (!(o instanceof UnitObject && typeof f === "function")) {
+        const { method, args } = data,
+          o = this.get(id);
+        if (!(o instanceof UnitObject && method in o)) {
           throw new Error(`Wrong object for ${method} in ${owner}`);
         }
-        return f.apply(o, data.args);
+        return o[method](...args);
       }
 
       case RT.FUNCTION: {
@@ -121,27 +120,22 @@ export default class extends Map {
         if (typeof f !== "function") {
           throw new Error(`Wrong function reference in ${owner}`);
         }
-        return f.apply(f, data.args);
+        return f(...data.args);
       }
     }
   }
 
   replacer(v) {
-    if (v instanceof UnitObjectProxy) {
-      return Reference(v._ref);
-    }
-    if (v instanceof UnitsProxyTarget) {
-      return Reference(RT.UNIT, v._target);
-    }
-    if (v instanceof UnitObject) {
-      return Reference(RT.OBJECT, this.store(v), this._handler.name);
-    }
-    if (typeof v === "function") {
-      return Reference(RT.FUNCTION, this.store(v), this._handler.name);
-    }
-
-    // as is
-    return v;
+    const { name } = this._handler;
+    return v instanceof UnitObject
+      ? Reference(RT.OBJECT, this.store(v), name)
+      : typeof v === "function"
+      ? Reference(RT.FUNCTION, this.store(v), name)
+      : v instanceof UnitsProxyTarget
+      ? Reference(RT.UNIT, v._target)
+      : v instanceof UnitObjectProxy
+      ? Reference(v._ref)
+      : v;
   }
 
   reviver(v) {

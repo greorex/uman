@@ -53,6 +53,7 @@ export { UnitMain } from "./main";
 // expert level
 export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
+export { PackagerMethod } from "./packager";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
 export { UnitsManager } from "./manager";

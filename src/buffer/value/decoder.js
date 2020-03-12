@@ -18,85 +18,102 @@ export class ValueDecoder {
   constructor(reader) {
     // private
     const src = reader,
-      _value = reviver => {
-        let value;
+      _value = (k, reviver) => {
+        let v;
 
-        switch (src.int8()) {
+        switch (src.byte()) {
           case VT.OBJECT:
-            value = {};
-            while (src.read() !== VT.END) {
+            v = {};
+            while (src.byte() !== VT.END) {
               src.rewind(-1);
-              const i = _value(),
-                item = _value(reviver);
-              value[i] = reviver ? reviver(i, item) : item;
+              const i = _value();
+              v[i] = _value(i, reviver);
             }
-            return value;
+            break;
 
           case VT.ARRAY:
-            value = [];
-            for (let i = 0; src.read() !== VT.END; i++) {
+            v = [];
+            for (let i = 0; src.byte() !== VT.END; i++) {
               src.rewind(-1);
-              const item = _value(reviver);
-              value[i] = reviver ? reviver(i, item) : item;
+              v[i] = _value(i, reviver);
             }
-            return value;
+            break;
 
           case VT.STRING8:
-            return src.utf8(src.read());
+            v = src.utf8(src.byte());
+            break;
           case VT.STRING16:
-            return src.utf8(src.uint16());
+            v = src.utf8(src.uint16());
+            break;
           case VT.STRING32:
-            return src.utf8(src.uint32());
+            v = src.utf8(src.uint32());
+            break;
 
           case VT.UINT8:
-            return src.read();
-          case -VT.UINT8:
-            return -src.read();
+            v = src.byte();
+            break;
+          case VT.N_UINT8:
+            v = -src.byte();
+            break;
           case VT.UINT16:
-            return src.uint16();
-          case -VT.UINT16:
-            return -src.uint16();
+            v = src.uint16();
+            break;
+          case VT.N_UINT16:
+            v = -src.uint16();
+            break;
           case VT.UINT32:
-            return src.uint32();
-          case -VT.UINT32:
-            return -src.uint32();
+            v = src.uint32();
+            break;
+          case VT.N_UINT32:
+            v = -src.uint32();
+            break;
           case VT.FLOAT32:
-            return src.float32();
+            v = src.float32();
+            break;
           case VT.FLOAT64:
-            return src.float64();
+            v = src.float64();
+            break;
 
           case VT.BIGINT:
-            return src.bigInt();
+            v = src.bigInt();
+            break;
 
           case VT.TRUE:
-            return true;
+            v = true;
+            break;
           case VT.FALSE:
-            return false;
+            v = false;
+            break;
 
           case VT.EMPTY:
-            return "";
+            v = "";
+            break;
           case VT.ZERO:
-            return 0;
+            v = 0;
+            break;
           case VT.NULL:
-            return null;
+            v = null;
+            break;
 
           case VT.NAN:
-            return NaN;
+            v = NaN;
+            break;
           case VT.INFINITY:
-            return Infinity;
+            v = Infinity;
+            break;
           case -VT.INFINITY:
-            return -Infinity;
+            v = -Infinity;
+            break;
 
           default:
           case VT.UNDEFINED:
             break;
         }
+
+        return reviver ? reviver(k, v) : v;
       };
 
     // any json value
-    this.decode = (reviver = null) => {
-      const value = _value(reviver);
-      return reviver ? reviver("", value) : value;
-    };
+    this.decode = (reviver = null) => _value("", reviver);
   }
 }

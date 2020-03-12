@@ -10,13 +10,8 @@
 
 // @ts-check
 
-import { MessageType, TargetType } from "./enums";
+import { MessageType as MT, TargetType as TT } from "./enums";
 import Emitter from "./emitter";
-
-// locals
-const EVENT = MessageType.EVENT;
-const REQUEST = MessageType.REQUEST;
-const ALL = TargetType.ALL;
 
 /**
  * Units proxy base
@@ -36,7 +31,7 @@ class ProxyBase extends Emitter {
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
       handler._redispatch({
-        type: EVENT,
+        type: MT.EVENT,
         target: target,
         sender: handler.name,
         method,
@@ -57,14 +52,14 @@ export class UnitsProxyTarget extends ProxyBase {
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(...args)
     return new Proxy(this, {
-      get: (t, prop, receiver) =>
+      get: (t, prop) =>
         prop in t
           ? // if own asked, 'onmethod'
-            Reflect.get(t, prop, receiver)
+            t[prop]
           : // request method
             (...args) =>
               handler._redispatch({
-                type: REQUEST,
+                type: MT.REQUEST,
                 target,
                 method: prop,
                 args
@@ -78,16 +73,16 @@ export class UnitsProxyTarget extends ProxyBase {
  */
 export class UnitsProxy extends ProxyBase {
   constructor(handler) {
-    super(handler, ALL);
+    super(handler, TT.ALL);
 
     // const other = unit.units.other;
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        let value = Reflect.get(t, prop, receiver);
+      get: (t, prop) => {
+        let value = t[prop];
         if (!value) {
           // asume "other" asked
           value = new UnitsProxyTarget(handler, prop);
-          Reflect.set(t, prop, value, receiver);
+          t[prop] = value;
         }
         return value;
       }

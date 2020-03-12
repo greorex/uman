@@ -1,9 +1,17 @@
 import { render, describe, test, beforeAll, expect } from "./engine";
 import { Main, Adapter } from "./classes";
-import { name, version, options, UnitLoader, UnitsManager } from "uman";
+import {
+  name,
+  version,
+  options,
+  UnitLoader,
+  UnitsManager,
+  PackagerMethod as PM
+} from "uman";
 
 // to debug...
 options.timeout = 0;
+options.packager = PM.BUFFER;
 
 /**
  * tests

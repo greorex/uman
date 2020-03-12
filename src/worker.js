@@ -11,9 +11,8 @@
 // @ts-check
 
 import { MessageType as MT } from "./enums";
+import { Packager, PackagerMethod as PM } from "./packager";
 import { UnitBase } from "./base";
-import { json2ab } from "./buffer/writer";
-import { ab2json } from "./buffer/reader";
 
 // locals
 const SIGNATURE = "_uman";
@@ -32,11 +31,12 @@ export class UnitWorkerEngine extends UnitBase {
     // proper engine
     this._engine = data => engine;
 
+    // packager
+    this._packager = new Packager(SIGNATURE);
+
     // attach engine (worker or worker self instance)
     // arguments to support transferable objects
-    this.postMessage = function() {
-      engine.postMessage.apply(engine, arguments);
-    };
+    this.postMessage = (...args) => engine.postMessage(...args);
     engine.onerror = error => {
       throw error;
     };
@@ -170,65 +170,48 @@ export class UnitWorkerEngine extends UnitBase {
   toMessage(data, engine = null, pure = false) {
     let id = 0;
     const transfer = [],
-      stringify = false,
-      { _calls } = this,
-      replacer = (k, v) => {
-        switch (typeof v) {
-          case "function":
-          case "object":
-            v = _calls.replacer(v);
-            // transfer?
-            if (
-              v instanceof ArrayBuffer ||
-              v instanceof ImageBitmap ||
-              (_offscreenCanvas && v instanceof OffscreenCanvas)
-            ) {
-              transfer[++id] = v;
-              v = {
-                [TRANSFER]: id
-              };
-            }
-        }
-        return v;
-      };
+      { _calls, _packager, options } = this,
+      method = pure ? PM.NOOP : options.packager;
 
-    /*
-  console.time("str");
-  JSON.stringify(data, replacer);
-  console.timeEnd("str");
-  transfer.length = id = 0;
-
-  const e = new ValueEncoder();
-  console.time("buf");
-  e.encode(data, replacer);
-  console.timeEnd("buf");
-  transfer.length = id = 0;
-  */
+    // pack
+    transfer[0] = _packager.pack(method, data, (_, v) => {
+      switch (typeof v) {
+        case "function":
+        case "object":
+          v = _calls.replacer(v);
+          // transfer?
+          if (
+            v instanceof ArrayBuffer ||
+            v instanceof ImageBitmap ||
+            (_offscreenCanvas && v instanceof OffscreenCanvas)
+          ) {
+            transfer[++id] = v;
+            v = {
+              [TRANSFER]: id
+            };
+          }
+      }
+      return v;
+    });
 
     if (!engine) {
       engine = this._engine(data);
     }
 
-    // sign
-    data[SIGNATURE] = true;
-
-    transfer[0] = pure
-      ? data
-      : stringify
-      ? JSON.stringify(data, replacer)
-      : json2ab(data, replacer);
-
     // as args, with transferables
-    engine.postMessage.apply(engine, [
-      transfer,
-      !(pure || stringify) ? transfer : transfer.slice(1)
-    ]);
+    engine.postMessage(
+      ...[transfer, method === PM.BUFFER ? transfer : transfer.slice(1)]
+    );
   }
 
   fromEvent(event) {
-    const { data } = event,
-      { _calls } = this,
-      reviver = (k, v) => {
+    const { data } = event;
+
+    // from args, with transferables
+    if (Array.isArray(data) && data.length) {
+      const { _calls, _packager } = this;
+
+      return _packager.unpack(data[0], (_, v) => {
         if (typeof v === "object") {
           if (TRANSFER in v) {
             v = data[v[TRANSFER]];
@@ -236,22 +219,7 @@ export class UnitWorkerEngine extends UnitBase {
           v = _calls.reviver(v);
         }
         return v;
-      };
-
-    // from args, with transferables
-    if (Array.isArray(data) && data.length) {
-      const message = data[0],
-        signed =
-          typeof message === "string"
-            ? JSON.parse(message, reviver)
-            : message instanceof ArrayBuffer
-            ? ab2json(message, reviver)
-            : message;
-
-      // our?
-      if (signed && signed[SIGNATURE]) {
-        return signed;
-      }
+      });
     }
   }
 

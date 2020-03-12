@@ -17,22 +17,16 @@ import { UnitWorker } from "./dedicated";
  */
 class Adapter {
   constructor(worker) {
-    const _postMessage = worker.port.postMessage;
-    if (typeof _postMessage !== "function") {
+    const port = worker.port;
+    if (!(port && typeof port.postMessage === "function")) {
       throw new Error(`There is no 'postMessage' in ${worker}`);
     }
-    this.postMessage = function() {
-      _postMessage.apply(worker.port, arguments);
-    };
-    worker.port.addEventListener("message", event => {
-      // @ts-ignore
-      this.onmessage(event);
-    });
-    worker.port.start();
-    worker.addEventListener("error", error => {
-      // @ts-ignore
-      this.onerror(error);
-    });
+    this.postMessage = (...args) => port.postMessage(...args);
+    // @ts-ignore
+    port.addEventListener("message", event => this.onmessage(event));
+    port.start();
+    // @ts-ignore
+    worker.addEventListener("error", error => this.onerror(error));
   }
 
   // absent

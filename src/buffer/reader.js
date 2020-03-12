@@ -21,14 +21,17 @@ const uint8 = new Uint8Array(8),
   view = new DataView(uint8.buffer);
 
 /**
- * streamed
+ * streamed interface
  */
 class Reader {
   constructor(littleEndian = true) {
     this.littleEndian = littleEndian;
+    this._vd = new ValueDecoder(this);
   }
 
-  read() {
+  // to override
+
+  byte() {
     return 0; // byte
   }
 
@@ -41,59 +44,53 @@ class Reader {
   }
 
   utf8(length) {
-    return _utf8(this.bytes(length));
-  }
-
-  // private
-  __read(bytes = 8) {
-    for (let i = 0; i < bytes; i++) {
-      uint8[i] = this.read();
-    }
+    return "";
   }
 
   // public
+
   int8() {
-    return (this.read() << 24) >> 24;
+    return (this.byte() << 24) >> 24;
   }
 
   uint16() {
-    this.__read(2);
+    uint8.set(this.bytes(2));
     return view.getUint16(0, this.littleEndian);
   }
 
   int16() {
-    this.__read(2);
+    uint8.set(this.bytes(2));
     return view.getInt16(0, this.littleEndian);
   }
   uint32() {
-    this.__read(4);
+    uint8.set(this.bytes(4));
     return view.getUint32(0, this.littleEndian);
   }
 
   int32() {
-    this.__read(4);
+    uint8.set(this.bytes(4));
     return view.getInt32(0, this.littleEndian);
   }
   float32() {
-    this.__read(4);
+    uint8.set(this.bytes(4));
     return view.getFloat32(0, this.littleEndian);
   }
   float64() {
-    this.__read(8);
+    uint8.set(this.bytes(8));
     return view.getFloat64(0, this.littleEndian);
   }
   bigUint() {
-    this.__read(8);
+    uint8.set(this.bytes(8));
     return view.getBigUint64(0, this.littleEndian);
   }
   bigInt() {
-    this.__read(8);
+    uint8.set(this.bytes(8));
     return view.getBigInt64(0, this.littleEndian);
   }
 
   // any json value
   value(reviver = null) {
-    return new ValueDecoder(this).decode(reviver);
+    return this._vd.decode(reviver);
   }
 }
 
@@ -107,25 +104,23 @@ export class BufferReader extends Reader {
     if (!(buffer instanceof ArrayBuffer)) {
       throw new Error(`BufferReader: buffer is not an ArrayBuffer`);
     }
-    this._data = new Uint8Array(buffer);
+    this.data = new Uint8Array(buffer);
     // public
     this.offset = 0;
-    this.size = this._data.byteLength;
+    this.size = this.data.byteLength;
   }
 
-  isEndOfBuffer() {
-    return this.offset >= this.size;
-  }
+  // override
 
-  read() {
-    return this._data[this.offset++];
+  byte() {
+    return this.data[this.offset++];
   }
 
   // @ts-ignore
   bytes(length = 0) {
-    const { _data, offset } = this;
+    const { data, offset } = this;
     this.offset += length;
-    return _data.subarray(offset, this.offset);
+    return data.subarray(offset, this.offset);
   }
 
   rewind(bytes) {
@@ -133,16 +128,15 @@ export class BufferReader extends Reader {
   }
 
   utf8(length) {
-    const v = _utf8(this._data, this.offset, length);
+    const v = _utf8(this.data, this.offset, length);
     this.offset += length;
     return v;
   }
 
-  // private
-  __read(bytes = 8) {
-    for (let i = 0; i < bytes; i++) {
-      uint8[i] = this._data[this.offset++];
-    }
+  // public
+
+  isEndOfBuffer() {
+    return this.offset >= this.size;
   }
 }
 
@@ -150,7 +144,7 @@ export class BufferReader extends Reader {
  * Array Buffer -> JSON like object
  */
 export const ab2json = (buf, reviver = null, littleEndian = true) => {
-  if (!(buf && buf instanceof ArrayBuffer)) {
+  if (!(buf instanceof ArrayBuffer)) {
     throw new Error(`ab2json: value is not an ArrayBuffer`);
   }
   return new BufferReader(buf, littleEndian).value(reviver);

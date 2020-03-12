@@ -35,10 +35,14 @@ export default {
   ZERO: 31,
   INFINITY: 32,
   // integer
-  // < 0 = -1*
-  UINT8: 41,
-  UINT16: 42,
-  UINT32: 43,
+  UINT8: 41, // 215
+  UINT16: 42, // 214
+  UINT32: 43, // 213
+  // < 0 = -1*t
+  // or as uint
+  N_UINT8: 215,
+  N_UINT16: 214,
+  N_UINT32: 213,
   // big
   BIGINT: 51,
   // float

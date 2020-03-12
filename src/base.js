@@ -10,15 +10,11 @@
 
 // @ts-check
 
-import { MessageType } from "./enums";
+import { MessageType as MT } from "./enums";
 import options from "./options";
 import Engine from "./calls";
 import Emitter from "./emitter";
 import { UnitsProxy } from "./proxy";
-
-// locals
-const EVENT = MessageType.EVENT;
-const REQUEST = MessageType.REQUEST;
 
 /**
  * unit base call engine
@@ -40,15 +36,13 @@ export class UnitBase extends Emitter {
 
     // proxy engine
     return new Proxy(this, {
-      get: (t, prop, receiver) =>
+      get: (t, prop) =>
         prop in t
-          ? // if own asked
-            Reflect.get(t, prop, receiver)
-          : // request method
-            (...args) =>
-              receiver._dispatch({
-                type: REQUEST,
-                target: receiver.name,
+          ? t[prop]
+          : (...args) =>
+              t._dispatch({
+                type: MT.REQUEST,
+                target: t.name,
                 method: prop,
                 args
               })
@@ -77,21 +71,20 @@ export class UnitBase extends Emitter {
   }
 
   _oncall(data) {
-    const { method, args } = data,
-      f = this[method];
-    if (typeof f !== "function") {
+    const { method, args } = data;
+    if (!(method in this)) {
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
     }
     // may be async as well
-    return f.apply(this, args);
+    return this[method](...args);
   }
 
   _dispatch(data) {
     switch (data.type) {
-      case REQUEST:
+      case MT.REQUEST:
         return this._calls._oncall(data, this);
 
-      case EVENT:
+      case MT.EVENT:
         this._onevent(data);
     }
   }
