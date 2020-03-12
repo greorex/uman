@@ -10,9 +10,9 @@
 
 // @ts-check
 
-import { UnitEventEmitter } from "./emitter";
+import Emitter from "./emitter";
 
 /**
  * to export objects with functionality from unit
  */
-export class UnitObject extends UnitEventEmitter {}
+export class UnitObject extends Emitter {}

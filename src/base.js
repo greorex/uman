@@ -12,9 +12,9 @@
 
 import { MessageType } from "./enums";
 import options from "./options";
+import Engine from "./calls";
+import Emitter from "./emitter";
 import { UnitsProxy } from "./proxy";
-import { UnitCallsEngine } from "./calls";
-import { UnitEventEmitter } from "./emitter";
 
 // locals
 const EVENT = MessageType.EVENT;
@@ -23,7 +23,7 @@ const REQUEST = MessageType.REQUEST;
 /**
  * unit base call engine
  */
-export class UnitBase extends UnitEventEmitter {
+export class UnitBase extends Emitter {
   constructor() {
     super();
 
@@ -32,7 +32,7 @@ export class UnitBase extends UnitEventEmitter {
     // manager engine
     this.name = "";
     this.units = new UnitsProxy(this);
-    this._calls = new UnitCallsEngine(this);
+    this._calls = new Engine(this);
 
     // no then function
     // if promise check
@@ -77,12 +77,13 @@ export class UnitBase extends UnitEventEmitter {
   }
 
   _oncall(data) {
-    const { method, args } = data;
-    if (!(method in this)) {
+    const { method, args } = data,
+      f = this[method];
+    if (typeof f !== "function") {
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
     }
     // may be async as well
-    return this[method](...args);
+    return f.apply(this, args);
   }
 
   _dispatch(data) {

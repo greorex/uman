@@ -11,7 +11,7 @@
 // @ts-check
 
 import { MessageType, TargetType } from "./enums";
-import { UnitEventEmitter } from "./emitter";
+import Emitter from "./emitter";
 
 // locals
 const EVENT = MessageType.EVENT;
@@ -21,7 +21,7 @@ const ALL = TargetType.ALL;
 /**
  * Units proxy base
  */
-class UnitsProxyBase extends UnitEventEmitter {
+class ProxyBase extends Emitter {
   constructor(handler, target) {
     super();
 
@@ -48,7 +48,7 @@ class UnitsProxyBase extends UnitEventEmitter {
 /**
  * Units proxy target engine
  */
-export class UnitsProxyTarget extends UnitsProxyBase {
+export class UnitsProxyTarget extends ProxyBase {
   constructor(handler, target) {
     super(handler, target);
 
@@ -76,7 +76,7 @@ export class UnitsProxyTarget extends UnitsProxyBase {
 /**
  * Units fast access to other units
  */
-export class UnitsProxy extends UnitsProxyBase {
+export class UnitsProxy extends ProxyBase {
   constructor(handler) {
     super(handler, ALL);
 

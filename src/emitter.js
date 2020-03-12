@@ -13,7 +13,7 @@
 /**
  * simple event emitter
  */
-export class UnitEventEmitter {
+export default class {
   constructor() {
     // private
     const _listeners = {};

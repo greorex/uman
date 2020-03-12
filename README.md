@@ -6,24 +6,25 @@ _A javascript library to split your code with web workers_
 
 ## About
 
-Being a small but robust javascript library, the _Uman_ lets easily split your code by separarted modules - units. Even more, you may define units as [web workers](https://developer.mozilla.org/docs/Web/API/Web_Workers_API) to have pure multithreading way of programming. With the _Uman_ you don't have to think about communication between workers.
+Being a small but robust javascript library, the _Uman_ lets easily split your code by separarted modules - units. Even more, you may define units as [web workers](https://developer.mozilla.org/docs/Web/API/Web_Workers_API) to have pure multithreading way of programming and don't think about communication between workers.
 
 ## Features
 
 - ES6+
 - small size
 - no dependency
+- units lazy loading
 - code splitting support
-- units lazy loading on demand
+- [transferable](https://developer.mozilla.org/docs/Web/API/Transferable) objects accepted
 - easy communication between units
 - pure multithreading with web workers
 - [dedicated](https://developer.mozilla.org/docs/Web/API/Worker), [shared](https://developer.mozilla.org/docs/Web/API/SharedWorker) and [service](https://developer.mozilla.org/docs/Web/API/Service_Worker_API) workers support
 
 ## Why?
 
-_Javascript_ is single threaded. The browser freezes UI and other operations if task eats a lot of resources and time to do things. To avoid this you have to code in asynchronous way.
+_Javascript_ is single threaded. The browser freezes UI and other operations if task eats a lot of resources and time to do things.
 
-The best choice is _web workers_ to run the code in background threads independently from the main thread. This also gives you pure multithreading approach.
+The best choice to avoid that is _web workers_ to run your code in background threads independently from the main thread. This also gives you pure multithreading approach.
 
 To start code with _worker_ you usually do the following:
 
@@ -34,7 +35,6 @@ To start code with _worker_ you usually do the following:
 worker.postMessage(message);
 // sometime or never
 worker.onmessage = event => {
-  // check if it has data
   // check if it's for you
   // do things
 };
@@ -45,7 +45,6 @@ worker.onmessage = event => {
 ```javascript
 // reply
 onmessage = event => {
-  // check if it has data
   // check it's for you
   // do things, reply
   postMessage(message);
@@ -56,7 +55,7 @@ It looks nice for a task.
 
 But!
 
-What if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to pass an object with methods to worker or back? How to avoid code duplication?
+What if you have more than one? What if you need to run tasks in separate workers? How to communicate between them and the main thread? How to pass objects with methods to workers or back? How to avoid code duplication?
 
 With the _Uman_ everything is as simple as if you code in asynchronous way:
 
@@ -65,7 +64,7 @@ With the _Uman_ everything is as simple as if you code in asynchronous way:
 ```javascript
 // ask worker to do things
 const result = await unit.dothings(...args);
-// do things with result
+// do things with the result
 // or catch an error
 ```
 
@@ -112,14 +111,14 @@ main.units.one.task(...args);
 export default Unit.instance(
   class extends Unit {
     async task(...args) {
-      const { units } = this;
+      const { two, six, ten } = this.units;
       // ask other workers to do things
       const result = await Promise.all([
-        units.two.dothings(...args),
-        units.six.dothings(...args)
+        two.dothings(...args),
+        six.dothings(...args)
       ]);
       // ask "ten" to do things, and reply
-      return await units.ten.dothings(result);
+      return await ten.dothings(result);
     }
   }
 );

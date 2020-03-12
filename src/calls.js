@@ -10,30 +10,33 @@
 
 // @ts-check
 
-import { MessageType } from "./enums";
+import { MessageType as MT } from "./enums";
 import { UnitObject } from "./object";
 import { UnitsProxyTarget } from "./proxy";
-import { ab2str, str2ab } from "./buffer";
-
-// locals
-const REQUEST = MessageType.REQUEST;
 
 // reference
 const REFERENCE = "_ref";
 // types
-const OBJECT = "_o";
-const FUNCTION = "_f";
-const UNIT = "_u";
-const TRANSFERABLE = "_t";
+const ReferenceType = {
+  OBJECT: 1,
+  FUNCTION: 2,
+  UNIT: 3
+};
+
+// alais
+const RT = ReferenceType;
 
 /**
  * creates reference object
  */
-const Reference = ({ type, id, owner = null }) => {
-  const r = {
-    type: type,
-    id
-  };
+const Reference = (type, id = null, owner = null) => {
+  const r =
+    typeof type === "object"
+      ? type
+      : {
+          type,
+          id
+        };
   if (owner) r.owner = owner;
   return {
     [REFERENCE]: r
@@ -62,7 +65,7 @@ class UnitObjectProxy {
           : // unit knows
             (...args) =>
               handler._redispatch({
-                type: REQUEST,
+                type: MT.REQUEST,
                 target: ref.owner,
                 handler: ref,
                 method: prop,
@@ -73,30 +76,9 @@ class UnitObjectProxy {
 }
 
 /**
- * cache
- */
-class CallsCache {
-  constructor() {
-    this._cache = Object.create(null);
-  }
-
-  set(key, value) {
-    this._cache[key] = value;
-  }
-
-  get(key) {
-    return this._cache[key];
-  }
-
-  delete(key) {
-    delete this._cache[key];
-  }
-}
-
-/**
  * engine to execute calls with built in cache
  */
-export class UnitCallsEngine extends CallsCache {
+export default class extends Map {
   constructor(handler) {
     super();
 
@@ -112,14 +94,6 @@ export class UnitCallsEngine extends CallsCache {
     this._handler = handler;
   }
 
-  cache(handler, type) {
-    return Reference({
-      type,
-      id: this.store(handler),
-      owner: this._handler.name
-    });
-  }
-
   _oncall(data, handler) {
     const ref = data.handler;
 
@@ -132,115 +106,74 @@ export class UnitCallsEngine extends CallsCache {
     const { type, id, owner } = ref;
 
     switch (type) {
-      case OBJECT: {
+      case RT.OBJECT: {
         const { method } = data,
-          o = this.get(id);
-        if (!(o instanceof UnitObject && method in o)) {
+          o = this.get(id),
+          f = o[method];
+        if (!(o instanceof UnitObject && typeof f === "function")) {
           throw new Error(`Wrong object for ${method} in ${owner}`);
         }
-        return o[method](...data.args);
+        return f.apply(o, data.args);
       }
 
-      case FUNCTION: {
+      case RT.FUNCTION: {
         const f = this.get(id);
         if (typeof f !== "function") {
           throw new Error(`Wrong function reference in ${owner}`);
         }
-        return f(...data.args);
+        return f.apply(f, data.args);
       }
     }
   }
 
-  toMessage(data) {
-    const transfer = [],
-      message = JSON.stringify(data, (_, v) => {
-        switch (typeof v) {
-          case "function":
-            return this.cache(v, FUNCTION);
+  replacer(v) {
+    if (v instanceof UnitObjectProxy) {
+      return Reference(v._ref);
+    }
+    if (v instanceof UnitsProxyTarget) {
+      return Reference(RT.UNIT, v._target);
+    }
+    if (v instanceof UnitObject) {
+      return Reference(RT.OBJECT, this.store(v), this._handler.name);
+    }
+    if (typeof v === "function") {
+      return Reference(RT.FUNCTION, this.store(v), this._handler.name);
+    }
 
-          case "object":
-            if (v instanceof UnitObject) {
-              return this.cache(v, OBJECT);
-            }
-            if (v instanceof UnitsProxyTarget) {
-              return Reference({
-                type: UNIT,
-                id: v._target
-              });
-            }
-            if (v instanceof UnitObjectProxy) {
-              return Reference(v._ref);
-            }
-
-            // transfer?
-            if (
-              v instanceof ArrayBuffer ||
-              v instanceof ImageBitmap ||
-              (typeof OffscreenCanvas === "function" &&
-                v instanceof OffscreenCanvas)
-            ) {
-              transfer.push(v);
-              return Reference({
-                type: TRANSFERABLE,
-                id: transfer.length
-              });
-            }
-        }
-
-        // as is
-        return v;
-      });
-
-    // to transferable
-    transfer.unshift(str2ab(message));
-
-    // as args
-    return [transfer, transfer];
+    // as is
+    return v;
   }
 
-  fromMessage(data) {
-    // as is?
-    if (!(data.length && Array.isArray(data) && data[0] instanceof ArrayBuffer))
-      return data;
+  reviver(v) {
+    if (REFERENCE in v) {
+      const handler = this._handler,
+        { name, units } = handler,
+        ref = v[REFERENCE],
+        { type, id, owner } = ref;
 
-    const handler = this._handler,
-      { name, units } = handler;
+      switch (type) {
+        case RT.OBJECT:
+          return owner === name
+            ? this.get(id)
+            : new UnitObjectProxy(ref, handler);
 
-    // from transferable
-    return JSON.parse(ab2str(data[0]), (_, v) => {
-      if (typeof v === "object") {
-        const ref = v[REFERENCE];
-        if (ref) {
-          const { type, id, owner } = ref;
+        case RT.FUNCTION:
+          return owner === name
+            ? this.get(id)
+            : (...args) =>
+                handler._redispatch({
+                  type: MT.REQUEST,
+                  target: owner,
+                  handler: ref,
+                  args
+                });
 
-          switch (type) {
-            case OBJECT:
-              return owner === name
-                ? this.get(id)
-                : new UnitObjectProxy(ref, handler);
-
-            case FUNCTION:
-              return owner === name
-                ? this.get(id)
-                : (...args) =>
-                    handler._redispatch({
-                      type: REQUEST,
-                      target: owner,
-                      handler: ref,
-                      args
-                    });
-
-            case UNIT:
-              return units[id];
-
-            case TRANSFERABLE:
-              return data[id];
-          }
-        }
+        case RT.UNIT:
+          return units[id];
       }
+    }
 
-      // as is
-      return v;
-    });
+    // as is
+    return v;
   }
 }

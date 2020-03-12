@@ -17,8 +17,12 @@ import { UnitWorker } from "./dedicated";
  */
 class Adapter {
   constructor(worker) {
-    this.postMessage = (...args) => {
-      worker.port.postMessage(...args);
+    const _postMessage = worker.port.postMessage;
+    if (typeof _postMessage !== "function") {
+      throw new Error(`There is no 'postMessage' in ${worker}`);
+    }
+    this.postMessage = function() {
+      _postMessage.apply(worker.port, arguments);
     };
     worker.port.addEventListener("message", event => {
       // @ts-ignore

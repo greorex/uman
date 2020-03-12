@@ -68,7 +68,7 @@ export default Unit.instance(
   class extends Unit {
     async run(arr) {
       const units = this.units;
-      const { one } = units;
+      const { one, two } = units;
 
       // call method "sum" of Unit One
       one
@@ -77,7 +77,7 @@ export default Unit.instance(
 
       const sum = await Promise.all([
         // call method "cubes" of Unit Two
-        one.sum(await units.two.cubes(arr)),
+        one.sum(await two.cubes(arr)),
         one.sumofcubes(arr)
       ]);
 

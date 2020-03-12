@@ -21,6 +21,7 @@ Special:
 
 - [UnitMain](#unit_main)
 - [UnitObject](#unit_object)
+- [Transferable](#transferable)
 
 [Adapters](#adapters):
 
@@ -254,9 +255,10 @@ export default Unit.instance(
 And somewhere in your unit:
 
 ```typescript
+const { one, two } = this.units;
 // call "one" to create objects
-const object1 = this.units.one.MyObject(...args);
-const object2 = this.units.one.MyObject(...args);
+const object1 = one.MyObject(...args);
+const object2 = one.MyObject(...args);
 
 // subscribe to catch event
 const off = object2.on("event", (...args) => {
@@ -267,12 +269,43 @@ const off = object2.on("event", (...args) => {
 const result1 = object1.method(...args);
 const result2 = object2.method(...args);
 // you my pass them as arguments as well
-const object3 = this.units.two.method(object1, ...args);
+const object3 = two.method(object1, ...args);
 // or
 const result3 = object3.method({ object2, ...args });
 
 // unsubscribe
 off();
+```
+
+<a name="transferable"></a>
+
+### Transferable
+
+To send [transferable](https://developer.mozilla.org/docs/Web/API/Transferable) objects from one unit to another just pass them as arguments of methods.
+
+The following classes like [ArrayBuffer](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), [ImageBitmap](https://developer.mozilla.org/docs/Web/API/ImageBitmap) and [OffscreenCanvas](https://developer.mozilla.org/docs/Web/API/OffscreenCanvas) are supported.
+
+> Note, object becomes unusable in the thread it was sent from and becomes available to the thread it was sent to.
+
+Example:
+
+`one.js`
+
+```typescript
+const abuf1 = new ArrayBuffer(size1);
+const abuf2 = new ArrayBuffer(size2);
+// send buffers
+const result = await this.units.two.method(abuf1, abuf2);
+// do things with result
+```
+
+`two.js`
+
+```typescript
+async method(buffer1, buffer2) {
+  // do things with buffers, reply
+  return result;
+}
 ```
 
 <a name="adapters"></a>

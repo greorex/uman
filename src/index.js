@@ -63,3 +63,10 @@ export { UnitWorker, UnitSharedWorker, UnitServiceWorker };
 export { UnitWorkerSelf } from "./workers/dedicated";
 export { UnitSharedWorkerSelf } from "./workers/shared";
 export { UnitServiceWorkerSelf } from "./workers/service";
+
+// array buffer
+export { default as LittleEndian } from "./buffer/endian";
+export { str2ab } from "./buffer/utf8/str2ab";
+export { ab2str } from "./buffer/utf8/ab2str";
+export { BufferWriter, json2ab } from "./buffer/writer";
+export { BufferReader, ab2json } from "./buffer/reader";
