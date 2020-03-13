@@ -12,7 +12,7 @@
 
 import { MessageType as MT } from "./enums";
 import options from "./options";
-import Engine from "./calls";
+import Calls from "./calls";
 import Emitter from "./emitter";
 import { UnitsProxy } from "./proxy";
 
@@ -28,7 +28,7 @@ export class UnitBase extends Emitter {
     // manager engine
     this.name = "";
     this.units = new UnitsProxy(this);
-    this._calls = new Engine(this);
+    this._calls = new Calls(this);
 
     // no then function
     // if promise check

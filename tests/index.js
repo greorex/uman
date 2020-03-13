@@ -11,7 +11,7 @@ import {
 
 // to debug...
 options.timeout = 0;
-options.packager = PM.BUFFER;
+options.packager = PM.OBJECT;
 
 /**
  * tests

@@ -124,11 +124,15 @@ export class BufferWriter extends Writer {
 
   empty() {
     this.offset = 0;
+    this.size = this.data ? this.data.byteLength : 0;
+    return this;
   }
 
   copy(offset = 0, size = 0) {
     if (offset < 0 || this.offset < offset) {
-      throw new Error(`BufferWriter.copy: wrong offset ${offset}`);
+      throw new Error(
+        `BufferWriter.copy: wrong offset [0 ${offset} ${this.offset}]`
+      );
     }
     if (size < 0) {
       throw new Error(`BufferWriter.copy: wrong size ${size}`);
@@ -163,8 +167,12 @@ export class BufferWriter extends Writer {
       // smart sized
       if (extra < this.extra) {
         extra = 2 * (this.size ? this.size : extra);
-        if (this.extra && extra > this.extra) extra = this.extra;
-        if (extra < MIN_CHUNK) extra = MIN_CHUNK;
+        if (this.extra && extra > this.extra) {
+          extra = this.extra;
+        }
+        if (extra < MIN_CHUNK) {
+          extra = MIN_CHUNK;
+        }
       }
       // new buffer
       this._realloc(this.size + extra);
@@ -177,7 +185,7 @@ export class BufferWriter extends Writer {
     if (size !== this.size || !size) {
       // set it up
       this.data = this.data ? this.copy(0, size) : new Uint8Array(size);
-      this.size = this.data.length;
+      this.size = this.data.byteLength;
     }
   }
 }

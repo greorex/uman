@@ -10,8 +10,8 @@
 
 // @ts-check
 
-import { json2ab } from "./buffer/writer";
-import { ab2json } from "./buffer/reader";
+import { BufferWriter } from "./buffer/writer";
+import { BufferReader } from "./buffer/reader";
 
 /**
  * packager methods enum
@@ -32,30 +32,31 @@ const PM = PackagerMethod;
 export class Packager {
   constructor(signature = null, key = true) {
     // protected
-    const _value = (k, v, replacer) => {
-      if (replacer) {
-        v = replacer(k, v);
-      }
-      // only objects
-      if (typeof v === "object" && v) {
-        const _entry = i => {
-          const item = v[i],
-            _item = _value(i, item, replacer);
-          if (_item !== item) v[i] = _item;
-        };
-
-        if (Array.isArray(v)) {
-          for (let i = 0, l = v.length; i < l; i++) {
-            _entry(i);
-          }
-        } else {
-          for (let i in v) {
-            _entry(i);
+    const _entry = (o, k, replacer) => {
+        const v = o[k],
+          _v = _value(k, v, replacer);
+        if (_v !== v) {
+          o[k] = _v;
+        }
+      },
+      _value = (k, v, replacer) => {
+        if (replacer) {
+          v = replacer(k, v);
+        }
+        // only objects
+        if (typeof v === "object" && v) {
+          if (Array.isArray(v)) {
+            for (let i = 0, l = v.length; i < l; i++) {
+              _entry(v, i, replacer);
+            }
+          } else {
+            for (let i in v) {
+              _entry(v, i, replacer);
+            }
           }
         }
-      }
-      return v;
-    };
+        return v;
+      };
 
     // public
 
@@ -66,12 +67,12 @@ export class Packager {
       }
 
       switch (method) {
-        case PM.NOOP:
-          return data;
+        case PM.BUFFER:
+          return new BufferWriter().value(data, replacer).buffer;
         case PM.STRING:
           return JSON.stringify(data, replacer);
-        case PM.BUFFER:
-          return json2ab(data, replacer);
+        case PM.NOOP:
+          return data;
       }
 
       return _value("", data, replacer);
@@ -80,7 +81,7 @@ export class Packager {
     this.unpack = (data, reviver = null) => {
       const unpacked =
         data instanceof ArrayBuffer
-          ? ab2json(data, reviver)
+          ? new BufferReader(data).value(reviver)
           : typeof data === "string"
           ? JSON.parse(data, reviver)
           : _value("", data, reviver);
