@@ -10,15 +10,15 @@
 
 // @ts-check
 
-import { UnitBase } from "./base";
+import Base from "./base";
 import { UnitWorkerSelf } from "./workers/dedicated";
 import { UnitSharedWorkerSelf } from "./workers/shared";
 import { UnitServiceWorkerSelf } from "./workers/service";
 
 /**
- * determines unit base class by globalThis
+ * local to determine unit base class by globalThis
  */
-const UnitAutoClass = () => {
+const _AutoClass = () => {
   switch ("function") {
     // @ts-ignore
     case typeof DedicatedWorkerGlobalScope:
@@ -32,16 +32,16 @@ const UnitAutoClass = () => {
   }
 
   // default
-  return UnitBase;
+  return Base;
 };
 
 /**
  * unit with autoselected base class
  */
-export class Unit extends UnitAutoClass() {
+export class Unit extends _AutoClass() {
   static instance(unitClass) {
     // create unit instance
-    switch (UnitAutoClass()) {
+    switch (_AutoClass()) {
       case UnitWorkerSelf:
       case UnitSharedWorkerSelf:
       case UnitServiceWorkerSelf:

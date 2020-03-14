@@ -25,7 +25,7 @@
 import { UnitWorker } from "./adapters/dedicated";
 import { UnitSharedWorker } from "./adapters/shared";
 import { UnitServiceWorker } from "./adapters/service";
-import { UnitLoader } from "./loader";
+import { default as UnitLoader } from "./loader";
 
 // register workers
 // dedicated

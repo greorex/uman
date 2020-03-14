@@ -30,7 +30,7 @@ class ProxyBase extends Emitter {
     // 1. unit.units.post(method, ...args) -> to all units
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
-      handler._redispatch({
+      handler.redispatch({
         type: MT.EVENT,
         target: target,
         sender: handler.name,
@@ -43,7 +43,7 @@ class ProxyBase extends Emitter {
 /**
  * Units proxy target engine
  */
-export class UnitsProxyTarget extends ProxyBase {
+export class ProxyTarget extends ProxyBase {
   constructor(handler, target) {
     super(handler, target);
 
@@ -58,7 +58,7 @@ export class UnitsProxyTarget extends ProxyBase {
             t[prop]
           : // request method
             (...args) =>
-              handler._redispatch({
+              handler.redispatch({
                 type: MT.REQUEST,
                 target,
                 method: prop,
@@ -71,7 +71,7 @@ export class UnitsProxyTarget extends ProxyBase {
 /**
  * Units fast access to other units
  */
-export class UnitsProxy extends ProxyBase {
+export default class extends ProxyBase {
   constructor(handler) {
     super(handler, TT.ALL);
 
@@ -81,7 +81,7 @@ export class UnitsProxy extends ProxyBase {
         let value = t[prop];
         if (!value) {
           // asume "other" asked
-          value = new UnitsProxyTarget(handler, prop);
+          value = new ProxyTarget(handler, prop);
           t[prop] = value;
         }
         return value;

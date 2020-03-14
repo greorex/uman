@@ -12,7 +12,8 @@
 
 import { MessageType as MT } from "./enums";
 import { Packager, PackagerMethod as PM } from "./packager";
-import { UnitBase } from "./base";
+import Base from "./base";
+import Handler from "./handler";
 
 // locals
 const SIGNATURE = "_uman";
@@ -22,49 +23,48 @@ const TRANSFER = "_transfer";
 const _offscreenCanvas = typeof OffscreenCanvas === "function";
 
 /**
- * unit worker communication engine
+ * worker communication engine
  */
-export class UnitWorkerEngine extends UnitBase {
+export class WorkerHandler extends Handler {
   constructor(engine) {
     super();
 
     // proper engine
-    this._engine = data => engine;
+    this._engine = () => engine;
 
     // packager
-    this._packager = new Packager(SIGNATURE);
+    this.packager = new Packager(SIGNATURE);
 
     // attach engine (worker or worker self instance)
     // arguments to support transferable objects
-    this.postMessage = (...args) => engine.postMessage(...args);
     engine.onerror = error => {
       throw error;
     };
     engine.onmessage = event => {
       const data = this.fromEvent(event);
 
-      if (!data) {
-        // ordinary listener
-        this.onmessage(event);
+      // uman's ?
+      if (data) {
+        switch (data.type) {
+          case MT.EVENT:
+            return this.onevent(data);
+          case MT.REQUEST:
+            return this.onrequest(data);
+          case MT.RESPONSE:
+            return this.onresponse(data);
+          case MT.RECEIPT:
+            return this.onreceipt(data);
+        }
       }
 
-      // uman's
-      switch (data.type) {
-        case MT.EVENT:
-          return this._onevent(data);
-        case MT.REQUEST:
-          return this._onrequest(data);
-        case MT.RESPONSE:
-          return this._onresponse(data);
-        case MT.RECEIPT:
-          return this._onreceipt(data);
-      }
+      // standard
+      this.unit.onmessage(event);
     };
   }
 
-  _onrequest(data) {
+  onrequest(data) {
     const { cid } = data,
-      _engine = this._engine(data),
+      _engine = this._engine(),
       promises = [];
 
     // call
@@ -76,7 +76,7 @@ export class UnitWorkerEngine extends UnitBase {
         };
 
         try {
-          r.result = await this._calls._oncall(data, this);
+          r.result = await this.calls.oncall(data, this);
         } catch (error) {
           r.error = error;
         }
@@ -107,32 +107,31 @@ export class UnitWorkerEngine extends UnitBase {
     Promise.all(promises);
   }
 
-  _onresponse(data) {
-    const c = this._calls.get(data.cid);
+  onresponse(data) {
+    const c = this.calls.get(data.cid);
     c && c.onresponse(data);
   }
 
-  _onreceipt(data) {
-    const c = this._calls.get(data.cid);
+  onreceipt(data) {
+    const c = this.calls.get(data.cid);
     c && c.onreceipt && c.onreceipt();
   }
 
   // override
-  _dispatch(data) {
+  dispatch(data) {
     switch (data.type) {
       case MT.REQUEST:
         // post and
         return new Promise((resolve, reject) => {
-          const { _calls, options } = this,
-            c = {};
+          const c = {};
 
           // to check if target alive
-          if (options.timeout) {
+          if (this.options.timeout) {
             data.receipt = true;
           }
 
           // id
-          data.cid = _calls.store(c);
+          data.cid = this.calls.store(c);
 
           // post
           this.toMessage(data);
@@ -140,17 +139,17 @@ export class UnitWorkerEngine extends UnitBase {
           // to return result
           c.onresponse = ({ cid, result, error }) => {
             c.onreceipt && c.onreceipt();
-            _calls.delete(cid);
+            this.calls.delete(cid);
             !error ? resolve(result) : reject(error);
           };
 
           // check no target
-          if (options.timeout) {
+          if (this.options.timeout) {
             let timer = setTimeout(() => {
               reject(
                 new Error(`Timeout on request ${data.method} in ${data.target}`)
               );
-            }, options.timeout);
+            }, this.options.timeout);
             // alive
             c.onreceipt = () => {
               if (timer) {
@@ -170,15 +169,14 @@ export class UnitWorkerEngine extends UnitBase {
   toMessage(data, engine = null, pure = false) {
     let id = 0;
     const transfer = [],
-      { _calls, _packager, options } = this,
-      method = pure ? PM.NOOP : options.packager;
+      method = pure ? PM.PURE : this.options.packager;
 
     // pack
-    transfer[0] = _packager.pack(method, data, (_, v) => {
-      switch (typeof v) {
+    transfer[0] = this.packager.pack(method, data, (_, v) => {
+      switch (v && typeof v) {
         case "function":
         case "object":
-          v = _calls.replacer(v);
+          v = this.calls.replacer(v);
           // transfer?
           if (
             v instanceof ArrayBuffer ||
@@ -195,7 +193,7 @@ export class UnitWorkerEngine extends UnitBase {
     });
 
     if (!engine) {
-      engine = this._engine(data);
+      engine = this._engine();
     }
 
     // as args, with transferables
@@ -209,27 +207,37 @@ export class UnitWorkerEngine extends UnitBase {
 
     // from args, with transferables
     if (Array.isArray(data) && data.length) {
-      const { _calls, _packager } = this;
-
-      return _packager.unpack(data[0], (_, v) => {
-        if (typeof v === "object") {
+      return this.packager.unpack(data[0], (_, v) => {
+        if (typeof v === "object" && v) {
           if (TRANSFER in v) {
             v = data[v[TRANSFER]];
           }
-          v = _calls.reviver(v);
+          v = this.calls.reviver(v);
         }
         return v;
       });
     }
   }
+}
 
-  // to self and back
-  post(event, ...args) {
-    return this._dispatch({
-      type: MT.EVENT,
-      method: event,
-      args
-    });
+/**
+ * base for worker related
+ */
+export class WorkerBase extends Base {
+  constructor(handler) {
+    super(handler);
+
+    // attach engine
+    this.postMessage = (...args) => handler._engine().postMessage(...args);
+
+    // to self and back
+    this.post = (event, ...args) => {
+      return handler.dispatch({
+        type: MT.EVENT,
+        method: event,
+        args
+      });
+    };
   }
 
   // to override

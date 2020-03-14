@@ -18,9 +18,9 @@ import { UnitServiceWorkerSelf } from "./service";
 let clientsList = [];
 
 /**
- * shared worker adapter
+ * local shared worker adapter
  */
-class Adapter {
+class _Adapter {
   constructor(engine) {
     // to all clients
     this.postMessage = (...args) => {
@@ -52,14 +52,15 @@ class Adapter {
  * unit base for shared worker script file
  */
 export class UnitSharedWorkerSelf extends UnitServiceWorkerSelf {
-  constructor(engine = new Adapter(self)) {
-    super(engine);
+  constructor(handler = null, engine = null) {
+    super(handler, engine ? engine : new _Adapter(self));
   }
 
   // override
   async _onterminate() {
-    // active engine
-    const engine = this.engine;
+    // last active engine
+    // @ts-ignore
+    const engine = this._handler._engine();
     // stop
     await super._onterminate();
     // update list

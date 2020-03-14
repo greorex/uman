@@ -10,17 +10,35 @@
 
 // @ts-check
 
-import { UnitWorkerEngine } from "../worker";
+import { WorkerBase, WorkerHandler } from "../worker";
+
+/**
+ * local handler to redispatch
+ */
+class _Handler extends WorkerHandler {
+  constructor(worker) {
+    super(worker);
+  }
+
+  onevent(data) {
+    return data.target ? this.redispatch(data) : super.onevent(data);
+  }
+
+  oncall(data) {
+    return data.target ? this.redispatch(data) : super.oncall(data);
+  }
+}
 
 /**
  * unit base for worker adapter
  */
-export class UnitWorker extends UnitWorkerEngine {
+export class UnitWorker extends WorkerBase {
   constructor(worker) {
-    super(worker);
+    super(new _Handler(worker));
+
+    // tell worker self
 
     this.terminate = async () => {
-      // tell worker self
       // @ts-ignore
       await this._onterminate();
       // drop engine
@@ -28,9 +46,9 @@ export class UnitWorker extends UnitWorkerEngine {
     };
 
     this.start = async () => {
-      // tell worker self
+      const { _handler } = this;
       // @ts-ignore
-      await this._onstart(this.name, this.options);
+      await this._onstart(_handler.name, _handler.options);
     };
   }
 
@@ -38,22 +56,9 @@ export class UnitWorker extends UnitWorkerEngine {
     return [
       ({ loader, adapter }) => {
         if (loader instanceof Worker) {
-          // use default
-          if (!adapter) adapter = UnitWorker;
-          // done
-          return new adapter(loader);
+          return adapter ? new adapter(loader) : new UnitWorker(loader);
         }
       }
     ];
-  }
-
-  _onevent(data) {
-    if (data.target) return this._redispatch(data);
-    return super._onevent(data);
-  }
-
-  _oncall(data) {
-    if (data.target) return this._redispatch(data);
-    return super._oncall(data);
   }
 }

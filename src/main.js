@@ -19,10 +19,9 @@ export class UnitMain extends UnitsManager {
   constructor(name = "main") {
     super();
 
-    // atach
-    this.name = name;
-    this._units = {
+    // attach
+    this.add({
       [name]: this
-    };
+    });
   }
 }

@@ -12,7 +12,7 @@
 
 import { MessageType as MT } from "./enums";
 import { UnitObject } from "./object";
-import { UnitsProxyTarget } from "./proxy";
+import { ProxyTarget } from "./proxy";
 
 // reference
 const REFERENCE = "_ref";
@@ -44,9 +44,9 @@ const Reference = (type, id = null, owner = null) => {
 };
 
 /**
- * object proxy
+ * to call unit object's methods
  */
-class UnitObjectProxy {
+class ProxyUnitObject {
   constructor(ref, handler) {
     this._ref = ref;
 
@@ -64,7 +64,7 @@ class UnitObjectProxy {
             t[prop]
           : // unit knows
             (...args) =>
-              handler._redispatch({
+              handler.redispatch({
                 type: MT.REQUEST,
                 target: ref.owner,
                 handler: ref,
@@ -78,7 +78,7 @@ class UnitObjectProxy {
 /**
  * engine to execute calls with built in cache
  */
-export default class extends Map {
+export default class Calls extends Map {
   constructor(handler) {
     super();
 
@@ -94,12 +94,12 @@ export default class extends Map {
     this._handler = handler;
   }
 
-  _oncall(data, handler) {
+  oncall(data, handler) {
     const ref = data.handler;
 
     // default context
     if (!(ref && ref.owner === handler.name)) {
-      return handler._oncall(data);
+      return handler.oncall(data);
     }
 
     // by reference
@@ -131,9 +131,9 @@ export default class extends Map {
       ? Reference(RT.OBJECT, this.store(v), name)
       : typeof v === "function"
       ? Reference(RT.FUNCTION, this.store(v), name)
-      : v instanceof UnitsProxyTarget
+      : v instanceof ProxyTarget
       ? Reference(RT.UNIT, v._target)
-      : v instanceof UnitObjectProxy
+      : v instanceof ProxyUnitObject
       ? Reference(v._ref)
       : v;
   }
@@ -149,13 +149,13 @@ export default class extends Map {
         case RT.OBJECT:
           return owner === name
             ? this.get(id)
-            : new UnitObjectProxy(ref, handler);
+            : new ProxyUnitObject(ref, handler);
 
         case RT.FUNCTION:
           return owner === name
             ? this.get(id)
             : (...args) =>
-                handler._redispatch({
+                handler.redispatch({
                   type: MT.REQUEST,
                   target: owner,
                   handler: ref,

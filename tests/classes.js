@@ -97,7 +97,7 @@ export class Main extends UnitMain {
       new ArrayBuffer(arr.length * 16)
     );
     // has to be 0 after
-    if (arrBuf.byteLength) return "failed";
+    // if (arrBuf.byteLength) return "failed";
     // and back
     i32a = new Int32Array(result[0]);
     // check second

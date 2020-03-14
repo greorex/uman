@@ -10,19 +10,21 @@
 
 // @ts-check
 
-import { UnitWorkerEngine } from "../worker";
+import { WorkerBase, WorkerHandler } from "../worker";
 
 /**
  * unit base for worker script file
  */
-export class UnitWorkerSelf extends UnitWorkerEngine {
-  constructor(engine) {
-    super(engine ? engine : self);
+export class UnitWorkerSelf extends WorkerBase {
+  constructor(handler = new WorkerHandler(self)) {
+    super(handler);
   }
 
   async _onstart(name, options) {
-    this.name = name;
-    this.options = { ...options };
+    const { _handler } = this;
+    // set it up
+    _handler.name = name;
+    _handler.options = { ...options };
     // initialize
     await this.start();
   }

@@ -10,12 +10,13 @@
 
 // @ts-check
 
+import { WorkerHandler } from "./../worker";
 import { UnitWorkerSelf } from "./dedicated";
 
 /**
- * service worker adapter
+ * local service worker adapter
  */
-class Adapter {
+class _Adapter {
   constructor(engine) {
     // new connections
     engine.addEventListener("activate", event => {
@@ -48,26 +49,37 @@ class Adapter {
 }
 
 /**
- * unit base for service worker script file
+ * local service worker handler
  */
-export class UnitServiceWorkerSelf extends UnitWorkerSelf {
-  constructor(engine = new Adapter(self)) {
+class _Handler extends WorkerHandler {
+  constructor(engine = new _Adapter(self)) {
     super(engine);
 
     // active
     this.engine = null;
 
     // override
-    // proper engine
-    this._engine = data => (data.engine ? data.engine : engine);
+    // proper engine -> last active
+    this._engine = () => (this.engine ? this.engine : engine);
   }
 
   // override
   fromEvent(event) {
     const data = super.fromEvent(event);
     if (data) {
-      this.engine = data.engine = event._engine;
+      this.engine = event._engine;
     }
     return data;
+  }
+}
+
+/**
+ * unit base for service worker script file
+ */
+export class UnitServiceWorkerSelf extends UnitWorkerSelf {
+  constructor(handler = null, engine = null) {
+    super(
+      handler ? handler : new _Handler(engine ? engine : new _Adapter(self))
+    );
   }
 }

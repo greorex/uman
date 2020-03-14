@@ -20,7 +20,7 @@ export const PackagerMethod = {
   OBJECT: 0, // default
   STRING: 1,
   BUFFER: 2,
-  NOOP: 255
+  PURE: 255
 };
 
 // locals
@@ -71,7 +71,7 @@ export class Packager {
           return new BufferWriter().value(data, replacer).buffer;
         case PM.STRING:
           return JSON.stringify(data, replacer);
-        case PM.NOOP:
+        case PM.PURE:
           return data;
       }
 

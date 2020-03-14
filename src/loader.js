@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import { UnitBase } from "./base";
+import Base from "./base";
 
 /**
  * loaders by order
@@ -44,7 +44,7 @@ const loadersQueue = [
 /**
  * lazy loader engine
  */
-export class UnitLoader {
+export default class Loader {
   constructor(params) {
     this.params = params;
   }
@@ -54,7 +54,7 @@ export class UnitLoader {
     for (let f of loadersQueue) {
       const unit = await f({ loader, name, ...rest });
       // loaded?
-      if (unit instanceof UnitBase) {
+      if (unit instanceof Base) {
         return unit;
       }
       // try next
@@ -67,13 +67,13 @@ export class UnitLoader {
   }
 
   static instance(params) {
-    return new UnitLoader(params).instance();
+    return new Loader(params).instance();
   }
 
   static register(loader) {
     if (Array.isArray(loader)) {
       for (let l of loader) {
-        UnitLoader.register(l);
+        Loader.register(l);
       }
     } else if (!loadersQueue.includes(loader)) {
       loadersQueue.push(loader);

@@ -11,12 +11,12 @@
 // @ts-check
 
 import { UnitWorker } from "./dedicated";
-import options from "../options";
+import Options from "../options";
 
 /**
- * to control service worker
+ * local adapter to control service worker
  */
-class Adapter {
+class _Adapter {
   constructor(worker) {
     const controller = worker.controller;
     if (!(controller && controller.postMessage === "function")) {
@@ -38,12 +38,12 @@ class Adapter {
  */
 export class UnitServiceWorker extends UnitWorker {
   constructor(worker) {
-    super(new Adapter(worker));
+    super(new _Adapter(worker));
   }
 
   static loader() {
     // options
-    options.serviceWorker = {
+    Options.serviceWorker = {
       timeout: 5 * 1000 // wait to be controlled
     };
 
@@ -69,7 +69,7 @@ export class UnitServiceWorker extends UnitWorker {
               reject(
                 new Error(`Timeout while activating service worker for ${name}`)
               );
-            }, options.serviceWorker.timeout);
+            }, Options.serviceWorker.timeout);
             // wait
             sw.onstatechange = e => {
               if (e.target.state === "activated") {
@@ -87,10 +87,7 @@ export class UnitServiceWorker extends UnitWorker {
           if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
           }
-          // use default
-          if (!adapter) adapter = UnitServiceWorker;
-          // done
-          return new adapter(loader);
+          return adapter ? new adapter(loader) : new UnitServiceWorker(loader);
         }
       }
     ];

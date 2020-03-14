@@ -13,9 +13,9 @@
 import { UnitWorker } from "./dedicated";
 
 /**
- * to control shared worker
+ * local adapter to control shared worker
  */
-class Adapter {
+class _Adapter {
   constructor(worker) {
     const port = worker.port;
     if (!(port && typeof port.postMessage === "function")) {
@@ -38,7 +38,7 @@ class Adapter {
  */
 export class UnitSharedWorker extends UnitWorker {
   constructor(worker) {
-    super(new Adapter(worker));
+    super(new _Adapter(worker));
   }
 
   static loader() {
@@ -46,10 +46,7 @@ export class UnitSharedWorker extends UnitWorker {
       ({ loader, adapter }) => {
         // @ts-ignore
         if (loader instanceof SharedWorker) {
-          // use default
-          if (!adapter) adapter = UnitSharedWorker;
-          // done
-          return new adapter(loader);
+          return adapter ? new adapter(loader) : new UnitSharedWorker(loader);
         }
       }
     ];
