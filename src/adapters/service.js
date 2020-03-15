@@ -87,7 +87,7 @@ export class UnitServiceWorker extends UnitWorker {
           if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
           }
-          return adapter ? new adapter(loader) : new UnitServiceWorker(loader);
+          return new (adapter ? adapter : UnitServiceWorker)(loader);
         }
       }
     ];

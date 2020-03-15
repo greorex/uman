@@ -17,16 +17,19 @@ import Base from "./base";
 import Loader from "./loader";
 
 /**
- * local manager redispatcher
+ * units orchestration engine
  */
-class _Handler extends Handler {
-  constructor() {
+export class UnitsManager extends Handler {
+  constructor(units = {}) {
     super();
 
     // critical sections
     this.loader = new CS();
     // real list
     this.handlers = {};
+
+    // copy entries
+    this.add(units);
   }
 
   select(filter = "all") {
@@ -73,7 +76,6 @@ class _Handler extends Handler {
     _handler.name = name;
     // common
     if (_handler !== this) {
-      // @ts-ignore
       _handler.calls = this.calls;
       _handler.redispatch = data => this.redispatch(data);
     }
@@ -120,6 +122,9 @@ class _Handler extends Handler {
   }
 
   async start(name) {
+    if (!name) {
+      return;
+    }
     // get
     let handler = this.handlers[name];
     if (handler instanceof Handler) {
@@ -141,60 +146,23 @@ class _Handler extends Handler {
   }
 
   async terminate(name) {
-    const handler = this.handlers[name];
-    // stop it if loaded
-    if (handler instanceof Handler) {
-      await handler.unit.terminate();
-    }
-    // drop it
-    if (handler) {
-      delete this.handlers[name];
-    }
-  }
-}
-
-/**
- * units orchestration engine
- */
-export class UnitsManager extends Base {
-  constructor(units = {}) {
-    super(new _Handler());
-
-    // copy entries
-    this.add(units);
-  }
-
-  select(filter = "all") {
-    // @ts-ignore
-    return this._handler.select(filter);
-  }
-
-  add(units) {
-    // @ts-ignore
-    this._handler.add(units);
-  }
-
-  // override
-  async start(name = null) {
     if (name) {
-      // @ts-ignore
-      return this._handler.start(name);
-    }
-  }
-
-  // override
-  async terminate(name = null) {
-    if (name) {
-      // @ts-ignore
-      return this._handler.terminate(name);
-    }
-
-    // all but this
-    // @ts-ignore
-    for (let unit of this.select("loaded")) {
-      if (unit !== this) {
-        // @ts-ignore
-        await this.terminate(unit.name);
+      // by name
+      const handler = this.handlers[name];
+      // stop it if loaded
+      if (handler instanceof Handler) {
+        await handler.unit.terminate();
+      }
+      // drop it
+      if (handler) {
+        delete this.handlers[name];
+      }
+    } else {
+      // all but this
+      for (let [key, handler] of Object.entries(this.handlers)) {
+        if (handler !== this) {
+          await this.terminate(key);
+        }
       }
     }
   }

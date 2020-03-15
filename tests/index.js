@@ -1,13 +1,6 @@
 import { render, describe, test, beforeAll, expect } from "./engine";
 import { Main, Adapter } from "./classes";
-import {
-  name,
-  version,
-  options,
-  UnitLoader,
-  UnitsManager,
-  PackagerMethod as PM
-} from "uman";
+import { name, version, options, UnitLoader, PackagerMethod as PM } from "uman";
 
 // to debug...
 options.timeout = 0;
@@ -62,7 +55,7 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("main unit created", () => {
-    expect(main).toBeInstanceOf(UnitsManager);
+    expect(main).toBeInstanceOf(Main);
     // check real list
     expect(main.select("main")).toBeInstanceOf(Main);
   });

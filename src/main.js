@@ -10,16 +10,18 @@
 
 // @ts-check
 
+import Base from "./base";
 import { UnitsManager } from "./manager";
 
 /**
  * main unit with built in manager
  */
-export class UnitMain extends UnitsManager {
+export class UnitMain extends Base {
   constructor(name = "main") {
-    super();
+    super(new UnitsManager());
 
     // attach
+    // @ts-ignore
     this.add({
       [name]: this
     });

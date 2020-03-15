@@ -62,6 +62,7 @@ export default class Handler {
 
   oncall(data) {
     const { method, args } = data;
+    // exists?
     if (!(method in this.unit)) {
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
     }

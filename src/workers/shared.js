@@ -10,7 +10,8 @@
 
 // @ts-check
 
-import { UnitServiceWorkerSelf } from "./service";
+import { UnitWorkerSelf } from "./dedicated";
+import { UnitServiceWorkerHandler } from "./service";
 
 /**
  * list of clients
@@ -51,9 +52,9 @@ class _Adapter {
 /**
  * unit base for shared worker script file
  */
-export class UnitSharedWorkerSelf extends UnitServiceWorkerSelf {
-  constructor(handler = null, engine = null) {
-    super(handler, engine ? engine : new _Adapter(self));
+export class UnitSharedWorkerSelf extends UnitWorkerSelf {
+  constructor(handler = null) {
+    super(handler ? handler : new UnitServiceWorkerHandler(new _Adapter(self)));
   }
 
   // override

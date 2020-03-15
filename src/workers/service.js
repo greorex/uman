@@ -51,9 +51,9 @@ class _Adapter {
 /**
  * local service worker handler
  */
-class _Handler extends WorkerHandler {
-  constructor(engine = new _Adapter(self)) {
-    super(engine);
+export class UnitServiceWorkerHandler extends WorkerHandler {
+  constructor(engine) {
+    super(engine ? engine : new _Adapter(self));
 
     // active
     this.engine = null;
@@ -77,9 +77,7 @@ class _Handler extends WorkerHandler {
  * unit base for service worker script file
  */
 export class UnitServiceWorkerSelf extends UnitWorkerSelf {
-  constructor(handler = null, engine = null) {
-    super(
-      handler ? handler : new _Handler(engine ? engine : new _Adapter(self))
-    );
+  constructor(handler = null) {
+    super(handler ? handler : new UnitServiceWorkerHandler());
   }
 }

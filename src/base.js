@@ -18,36 +18,44 @@ import Handler from "./handler";
  * Unit base for all units
  */
 export default class Base extends Emitter {
-  constructor(handler = new Handler()) {
+  constructor(handler = null) {
     super();
-
-    this._handler = handler;
 
     // no then function
     // if promise check
     this.then = undefined;
 
-    // attach
-    if (!(handler instanceof Handler)) {
+    if (!handler) {
+      handler = new Handler();
+    } else if (!(handler instanceof Handler)) {
       throw new Error(`Engine is not a Handler based`);
     }
 
+    // attach
+    this._handler = handler;
+
     // set proxy engine
     handler.unit = new Proxy(this, {
-      get: (t, prop) =>
-        prop in t
+      get: (t, prop) => {
+        if (prop in handler) {
+          const v = handler[prop];
+          return typeof v === "function"
+            ? (...args) => v.apply(handler, args)
+            : v;
+        }
+        return prop in t
           ? t[prop]
-          : prop in handler
-          ? handler[prop]
           : (...args) =>
               handler.dispatch({
                 type: MT.REQUEST,
                 target: handler.name,
                 method: prop,
                 args
-              })
+              });
+      }
     });
 
+    // proxied
     return handler.unit;
   }
 

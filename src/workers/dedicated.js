@@ -16,8 +16,8 @@ import { WorkerBase, WorkerHandler } from "../worker";
  * unit base for worker script file
  */
 export class UnitWorkerSelf extends WorkerBase {
-  constructor(handler = new WorkerHandler(self)) {
-    super(handler);
+  constructor(handler = null) {
+    super(handler ? handler : new WorkerHandler(self));
   }
 
   async _onstart(name, options) {

@@ -1,5 +1,5 @@
 import { Main } from "./classes";
-import { name, version, UnitsManager } from "uman";
+import { name, version } from "uman";
 
 /**
  * tests
@@ -23,7 +23,7 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("main unit created", () => {
-    expect(main).toBeInstanceOf(UnitsManager);
+    expect(main).toBeInstanceOf(Main);
     // check real list
     expect(main.select("main")).toBeInstanceOf(Main);
   });

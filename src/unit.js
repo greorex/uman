@@ -38,16 +38,19 @@ const _AutoClass = () => {
 /**
  * unit with autoselected base class
  */
-export class Unit extends _AutoClass() {
-  static instance(unitClass) {
-    // create unit instance
-    switch (_AutoClass()) {
-      case UnitWorkerSelf:
-      case UnitSharedWorkerSelf:
-      case UnitServiceWorkerSelf:
-        return new unitClass();
-    }
-    // on demand
-    return unitClass;
+export class Unit extends _AutoClass() {}
+
+/**
+ * to initialiaze unit class on demand
+ */
+Unit.instance = unitClass => {
+  // create unit instance
+  switch (_AutoClass()) {
+    case UnitWorkerSelf:
+    case UnitSharedWorkerSelf:
+    case UnitServiceWorkerSelf:
+      return new unitClass();
   }
-}
+  // on demand
+  return unitClass;
+};

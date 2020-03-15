@@ -46,7 +46,7 @@ export class UnitSharedWorker extends UnitWorker {
       ({ loader, adapter }) => {
         // @ts-ignore
         if (loader instanceof SharedWorker) {
-          return adapter ? new adapter(loader) : new UnitSharedWorker(loader);
+          return new (adapter ? adapter : UnitSharedWorker)(loader);
         }
       }
     ];

@@ -41,7 +41,7 @@ export class UnitWorker extends WorkerBase {
     this.terminate = async () => {
       // @ts-ignore
       await this._onterminate();
-      // drop engine
+      // stop it
       worker.terminate();
     };
 
@@ -56,7 +56,7 @@ export class UnitWorker extends WorkerBase {
     return [
       ({ loader, adapter }) => {
         if (loader instanceof Worker) {
-          return adapter ? new adapter(loader) : new UnitWorker(loader);
+          return new (adapter ? adapter : UnitWorker)(loader);
         }
       }
     ];
