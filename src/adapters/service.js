@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import { UnitWorker } from "./dedicated";
+import UnitWorkerHandler from "./dedicated";
 import Options from "../options";
 
 /**
@@ -34,9 +34,10 @@ class _Adapter {
 }
 
 /**
- * unit base for service worker adapter
+ * handler for service worker adapter
  */
-export class UnitServiceWorker extends UnitWorker {
+// @ts-ignore
+export default class UnitServiceWorkerHandler extends UnitWorkerHandler {
   constructor(worker) {
     super(new _Adapter(worker));
   }
@@ -81,13 +82,13 @@ export class UnitServiceWorker extends UnitWorker {
         }
       },
       // navigator.serviceWorker
-      ({ loader, adapter, name }) => {
+      ({ loader, name }) => {
         if (loader === navigator.serviceWorker) {
           // the page has to be controlled
           if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
           }
-          return new (adapter ? adapter : UnitServiceWorker)(loader);
+          return new UnitServiceWorkerHandler(loader);
         }
       }
     ];

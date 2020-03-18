@@ -11,19 +11,29 @@
 // @ts-check
 
 import Base from "./base";
-import { UnitsManager } from "./manager";
+import Manager from "./manager";
 
 /**
  * main unit with built in manager
  */
 export class UnitMain extends Base {
   constructor(name = "main") {
-    super(new UnitsManager());
-
+    super(new Manager());
     // attach
-    // @ts-ignore
     this.add({
       [name]: this
     });
   }
+  add(units) {
+    return this._handler.add(units);
+  }
+  select(filter = "all") {
+    return this._handler.select(filter);
+  }
+  // start(name = null) {
+  //   return this._handler.start(name);
+  // }
+  // terminate(name = null) {
+  //   return this._handler.terminate(name);
+  // }
 }

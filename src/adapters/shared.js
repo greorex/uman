@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import { UnitWorker } from "./dedicated";
+import UnitWorkerHandler from "./dedicated";
 
 /**
  * local adapter to control shared worker
@@ -36,17 +36,17 @@ class _Adapter {
 /**
  * unit base for shared worker adapter
  */
-export class UnitSharedWorker extends UnitWorker {
+export default class UnitSharedWorkerHandler extends UnitWorkerHandler {
   constructor(worker) {
     super(new _Adapter(worker));
   }
 
   static loader() {
     return [
-      ({ loader, adapter }) => {
+      ({ loader }) => {
         // @ts-ignore
         if (loader instanceof SharedWorker) {
-          return new (adapter ? adapter : UnitSharedWorker)(loader);
+          return new UnitSharedWorkerHandler(loader);
         }
       }
     ];

@@ -13,18 +13,18 @@
 import { TargetType as TT } from "./enums";
 import CS from "./critical";
 import Handler from "./handler";
-import Base from "./base";
 import Loader from "./loader";
+import Base from "./base";
 
 /**
  * units orchestration engine
  */
-export class UnitsManager extends Handler {
+export default class ManagerHandler extends Handler {
   constructor(units = {}) {
     super();
 
     // critical sections
-    this.loader = new CS();
+    this.starter = new CS();
     // real list
     this.handlers = {};
 
@@ -34,7 +34,7 @@ export class UnitsManager extends Handler {
 
   select(filter = "all") {
     const handler = this.handlers[filter],
-      replacer = h => (h instanceof Handler ? h.unit : h);
+      replacer = h => (h instanceof Handler ? h._unit : h);
     // unit?
     if (handler) {
       return replacer(handler);
@@ -73,14 +73,14 @@ export class UnitsManager extends Handler {
   attach(name, unit) {
     const { _handler } = unit;
     // set it up
-    _handler.name = name;
+    _handler._unit.name = _handler.name = name;
     // common
     if (_handler !== this) {
       _handler.calls = this.calls;
       _handler.redispatch = data => this.redispatch(data);
     }
     // update list
-    this.handlers[name] = _handler;
+    return (this.handlers[name] = _handler);
   }
 
   add(units) {
@@ -132,12 +132,12 @@ export class UnitsManager extends Handler {
     }
     // load if doesn't
     if (handler instanceof Loader) {
-      return this.loader.enter(async (leave, reject) => {
+      return this.starter.enter(async (leave, reject) => {
         try {
-          let unit = await handler.instance();
-          this.attach(name, unit);
+          const unit = await handler.instance();
+          handler = this.attach(name, unit);
           await unit.start();
-          leave(unit._handler);
+          leave(handler);
         } catch (error) {
           reject(error);
         }
@@ -148,15 +148,11 @@ export class UnitsManager extends Handler {
   async terminate(name) {
     if (name) {
       // by name
-      const handler = this.handlers[name];
-      // stop it if loaded
-      if (handler instanceof Handler) {
-        await handler.unit.terminate();
+      const unit = this.select(name);
+      if (unit instanceof Base) {
+        await unit.terminate();
       }
-      // drop it
-      if (handler) {
-        delete this.handlers[name];
-      }
+      delete this.handlers[name];
     } else {
       // all but this
       for (let [key, handler] of Object.entries(this.handlers)) {

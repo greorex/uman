@@ -24,7 +24,7 @@ export default class Handler {
     this.calls = new Calls(this);
     this.units = new ProxyUnits(this);
     // to be set
-    this.unit = null;
+    this._unit = null;
     this.name = "";
   }
 
@@ -48,7 +48,7 @@ export default class Handler {
     const { method, args, sender } = data;
     if (!sender) {
       // sibscribers of unit
-      this.unit.fire(method, ...args);
+      this._unit.fire(method, ...args);
     } else {
       const p = this.units[sender];
       // sibscribers of sender?
@@ -63,10 +63,16 @@ export default class Handler {
   oncall(data) {
     const { method, args } = data;
     // exists?
-    if (!(method in this.unit)) {
+    if (!(method in this._unit)) {
       throw new Error(`Method ${method} has to be declared in ${data.target}`);
     }
     // may be async as well
-    return this.unit[method](...args);
+    return this._unit[method](...args);
   }
+
+  // to override
+
+  async start() {}
+
+  async terminate() {}
 }

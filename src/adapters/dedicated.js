@@ -10,16 +10,36 @@
 
 // @ts-check
 
-import { WorkerBase, WorkerHandler } from "../worker";
+import { MessageType as MT } from "../enums";
+import WorkerHandler from "../worker";
 
 /**
- * local handler to redispatch
+ * handler to redispatch from worker unit
  */
-class _Handler extends WorkerHandler {
+export default class UnitWorkerHandler extends WorkerHandler {
   constructor(worker) {
     super(worker);
   }
 
+  // override
+
+  // to tell worker script
+  async start() {
+    return this.dispatch({
+      type: MT.START,
+      args: [this.name, this.options]
+    });
+  }
+
+  async terminate() {
+    await this.dispatch({
+      type: MT.TERMINATE
+    });
+    // stop it
+    this._engine().terminate();
+  }
+
+  // to redispatch
   onevent(data) {
     return data.target ? this.redispatch(data) : super.onevent(data);
   }
@@ -27,36 +47,12 @@ class _Handler extends WorkerHandler {
   oncall(data) {
     return data.target ? this.redispatch(data) : super.oncall(data);
   }
-}
-
-/**
- * unit base for worker adapter
- */
-export class UnitWorker extends WorkerBase {
-  constructor(worker) {
-    super(new _Handler(worker));
-
-    // tell worker self
-
-    this.terminate = async () => {
-      // @ts-ignore
-      await this._onterminate();
-      // stop it
-      worker.terminate();
-    };
-
-    this.start = async () => {
-      const { _handler } = this;
-      // @ts-ignore
-      await this._onstart(_handler.name, _handler.options);
-    };
-  }
 
   static loader() {
     return [
-      ({ loader, adapter }) => {
+      ({ loader }) => {
         if (loader instanceof Worker) {
-          return new (adapter ? adapter : UnitWorker)(loader);
+          return new UnitWorkerHandler(loader);
         }
       }
     ];

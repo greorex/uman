@@ -11,6 +11,7 @@
 // @ts-check
 
 import Base from "./base";
+import Handler from "./handler";
 
 /**
  * loaders by order
@@ -50,16 +51,20 @@ export default class Loader {
   }
 
   async instance() {
-    let { loader, name, ...rest } = this.params;
+    let { loader, name, adapter, ...rest } = this.params;
     for (let f of loadersQueue) {
-      const unit = await f({ loader, name, ...rest });
+      let result = await f({ loader, name, ...rest });
       // loaded?
-      if (unit instanceof Base) {
-        return unit;
+      if (result instanceof Base) {
+        return result;
+      }
+      // by default?
+      if (result instanceof Handler) {
+        return new (adapter ? adapter : Base)(result);
       }
       // try next
-      if (unit) {
-        loader = unit;
+      if (result) {
+        loader = result;
       }
     }
 

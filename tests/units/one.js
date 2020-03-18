@@ -7,8 +7,8 @@ class OneObject extends UnitObject {
   }
 }
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     // returns sum of array's elements
     sum(arr) {
       return arr.reduce((r, i) => (r += i), 0);

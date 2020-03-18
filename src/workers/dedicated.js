@@ -10,26 +10,34 @@
 
 // @ts-check
 
-import { WorkerBase, WorkerHandler } from "../worker";
+import { MessageType as MT } from "../enums";
+import WorkerHandler from "../worker";
 
 /**
- * unit base for worker script file
+ * unit handler for worker script file
  */
-export class UnitWorkerSelf extends WorkerBase {
-  constructor(handler = null) {
-    super(handler ? handler : new WorkerHandler(self));
+export default class WorkerSelfHandler extends WorkerHandler {
+  constructor(engine) {
+    super(engine ? engine : self);
   }
 
-  async _onstart(name, options) {
-    const { _handler } = this;
-    // set it up
-    _handler.name = name;
-    _handler.options = { ...options };
-    // initialize
-    await this.start();
-  }
+  // override
 
-  async _onterminate() {
-    await this.terminate();
+  oncall(data) {
+    switch (data.type) {
+      case MT.START: {
+        const [name, options] = data.args;
+        // set it up
+        this._unit.name = this.name = name;
+        this.options = { ...options };
+        // run
+        return this._unit.start();
+      }
+      case MT.TERMINATE:
+        // stop
+        return this._unit.terminate();
+    }
+
+    return super.oncall(data);
   }
 }

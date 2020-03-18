@@ -17,7 +17,9 @@ export const MessageType = {
   EVENT: -1,
   REQUEST: 2,
   RESPONSE: 3,
-  RECEIPT: 4
+  RECEIPT: 4,
+  START: 126,
+  TERMINATE: 127
 };
 
 /**

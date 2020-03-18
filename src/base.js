@@ -13,12 +13,13 @@
 import { MessageType as MT } from "./enums";
 import Emitter from "./emitter";
 import Handler from "./handler";
+import WorkerHandler from "./worker";
 
 /**
  * Unit base for all units
  */
 export default class Base extends Emitter {
-  constructor(handler = null) {
+  constructor(handler) {
     super();
 
     // no then function
@@ -28,22 +29,27 @@ export default class Base extends Emitter {
     if (!handler) {
       handler = new Handler();
     } else if (!(handler instanceof Handler)) {
-      throw new Error(`Engine is not a Handler based`);
+      throw new Error(`Handler is not a Handler based`);
     }
 
-    // attach
-    this._handler = handler;
+    // workers routines
+    if (handler instanceof WorkerHandler) {
+      this.postMessage = (...args) => handler.postMessage(...args);
+      // @ts-ignore
+      handler.onmessage = event => this.onmessage && this.onmessage(event);
+      // to self and back
+      this.post = (event, ...args) =>
+        handler.dispatch({
+          type: MT.EVENT,
+          method: event,
+          args
+        });
+    }
 
-    // set proxy engine
-    handler.unit = new Proxy(this, {
-      get: (t, prop) => {
-        if (prop in handler) {
-          const v = handler[prop];
-          return typeof v === "function"
-            ? (...args) => v.apply(handler, args)
-            : v;
-        }
-        return prop in t
+    // proxy routine
+    handler._unit = new Proxy(this, {
+      get: (t, prop) =>
+        prop in t
           ? t[prop]
           : (...args) =>
               handler.dispatch({
@@ -51,17 +57,21 @@ export default class Base extends Emitter {
                 target: handler.name,
                 method: prop,
                 args
-              });
-      }
+              })
     });
 
-    // proxied
-    return handler.unit;
+    // attach
+    this._handler = handler;
+    this.units = handler.units;
+
+    // as proxied
+    return handler._unit;
   }
 
-  // to override
-
-  async start() {}
-
-  async terminate() {}
+  async start(...args) {
+    return this._handler.start(...args);
+  }
+  async terminate(...args) {
+    return this._handler.terminate(...args);
+  }
 }

@@ -9,11 +9,9 @@ class TestsObject extends UnitObject {
   }
 }
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     constructor() {
-      super();
-
       this.on("noManagerTest", (...args) => {
         this.post("noManagerTest", `${args[0]} returned`);
       });

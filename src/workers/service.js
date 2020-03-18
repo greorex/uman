@@ -10,8 +10,7 @@
 
 // @ts-check
 
-import { WorkerHandler } from "./../worker";
-import { UnitWorkerSelf } from "./dedicated";
+import WorkerSelfHandler from "./dedicated";
 
 /**
  * local service worker adapter
@@ -49,9 +48,9 @@ class _Adapter {
 }
 
 /**
- * local service worker handler
+ * unit handler for service worker script file
  */
-export class UnitServiceWorkerHandler extends WorkerHandler {
+export default class ServiceWorkerSelfHandler extends WorkerSelfHandler {
   constructor(engine) {
     super(engine ? engine : new _Adapter(self));
 
@@ -70,14 +69,5 @@ export class UnitServiceWorkerHandler extends WorkerHandler {
       this.engine = event._engine;
     }
     return data;
-  }
-}
-
-/**
- * unit base for service worker script file
- */
-export class UnitServiceWorkerSelf extends UnitWorkerSelf {
-  constructor(handler = null) {
-    super(handler ? handler : new UnitServiceWorkerHandler());
   }
 }

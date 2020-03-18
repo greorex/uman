@@ -11,46 +11,41 @@
 // @ts-check
 
 import Base from "./base";
-import { UnitWorkerSelf } from "./workers/dedicated";
-import { UnitSharedWorkerSelf } from "./workers/shared";
-import { UnitServiceWorkerSelf } from "./workers/service";
-
-/**
- * local to determine unit base class by globalThis
- */
-const _AutoClass = () => {
-  switch ("function") {
-    // @ts-ignore
-    case typeof DedicatedWorkerGlobalScope:
-      return UnitWorkerSelf;
-    // @ts-ignore
-    case typeof SharedWorkerGlobalScope:
-      return UnitSharedWorkerSelf;
-    // @ts-ignore
-    case typeof ServiceWorkerGlobalScope:
-      return UnitServiceWorkerSelf;
-  }
-
-  // default
-  return Base;
-};
-
-/**
- * unit with autoselected base class
- */
-export class Unit extends _AutoClass() {}
+import Handler from "./handler";
+import DedicatedSelf from "./workers/dedicated";
+import SharedSelf from "./workers/shared";
+import ServiceSelf from "./workers/service";
 
 /**
  * to initialiaze unit class on demand
  */
-Unit.instance = unitClass => {
-  // create unit instance
-  switch (_AutoClass()) {
-    case UnitWorkerSelf:
-    case UnitSharedWorkerSelf:
-    case UnitServiceWorkerSelf:
-      return new unitClass();
+export default Unit => {
+  let HandlerClass = Handler;
+
+  switch ("function") {
+    // @ts-ignore
+    case typeof DedicatedWorkerGlobalScope:
+      HandlerClass = DedicatedSelf;
+      break;
+    // @ts-ignore
+    case typeof SharedWorkerGlobalScope:
+      HandlerClass = SharedSelf;
+      break;
+    // @ts-ignore
+    case typeof ServiceWorkerGlobalScope:
+      HandlerClass = ServiceSelf;
+      break;
   }
-  // on demand
-  return unitClass;
+
+  Object.setPrototypeOf(Unit.prototype, new Base(new HandlerClass()));
+
+  class _Unit extends Unit {
+    constructor() {
+      super();
+      // reattach
+      this._handler._unit = this;
+    }
+  }
+
+  return HandlerClass === Handler ? _Unit : new _Unit();
 };

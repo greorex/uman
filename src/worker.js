@@ -12,7 +12,6 @@
 
 import { MessageType as MT } from "./enums";
 import { Packager, PackagerMethod as PM } from "./packager";
-import Base from "./base";
 import Handler from "./handler";
 
 // locals
@@ -25,7 +24,7 @@ const _offscreenCanvas = typeof OffscreenCanvas === "function";
 /**
  * worker communication engine
  */
-export class WorkerHandler extends Handler {
+export default class WorkerHandler extends Handler {
   constructor(engine) {
     super();
 
@@ -37,6 +36,7 @@ export class WorkerHandler extends Handler {
 
     // attach engine (worker or worker self instance)
     // arguments to support transferable objects
+    this.postMessage = (...args) => engine.postMessage(...args);
     engine.onerror = error => {
       throw error;
     };
@@ -49,6 +49,8 @@ export class WorkerHandler extends Handler {
           case MT.EVENT:
             return this.onevent(data);
           case MT.REQUEST:
+          case MT.START:
+          case MT.TERMINATE:
             return this.onrequest(data);
           case MT.RESPONSE:
             return this.onresponse(data);
@@ -57,10 +59,64 @@ export class WorkerHandler extends Handler {
         }
       }
 
-      // standard
-      this.unit.onmessage(event);
+      // standard?
+      // @ts-ignore
+      this.onmessage && this.onmessage(event);
     };
   }
+
+  // override
+  dispatch(data) {
+    switch (data.type) {
+      case MT.REQUEST:
+      case MT.START:
+      case MT.TERMINATE:
+        // post and
+        return new Promise((resolve, reject) => {
+          const c = {};
+
+          // to check if target alive
+          if (this.options.timeout) {
+            data.receipt = true;
+          }
+
+          // id
+          data.cid = this.calls.store(c);
+
+          // post
+          this.toMessage(data);
+
+          // to return result
+          c.onresponse = ({ cid, result, error }) => {
+            c.onreceipt && c.onreceipt();
+            this.calls.delete(cid);
+            !error ? resolve(result) : reject(error);
+          };
+
+          // check no target
+          if (this.options.timeout) {
+            let timer = setTimeout(() => {
+              reject(
+                new Error(`Timeout on request ${data.method} in ${data.target}`)
+              );
+            }, this.options.timeout);
+            // alive
+            c.onreceipt = () => {
+              if (timer) {
+                clearTimeout(timer);
+                timer = null;
+              }
+            };
+          }
+        });
+
+      case MT.EVENT:
+        // just post
+        this.toMessage(data);
+    }
+  }
+
+  // to override
 
   onrequest(data) {
     const { cid } = data,
@@ -109,61 +165,15 @@ export class WorkerHandler extends Handler {
 
   onresponse(data) {
     const c = this.calls.get(data.cid);
+    if (!c) {
+      throw new Error(`Unknown response ${data.cid}`);
+    }
     c && c.onresponse(data);
   }
 
   onreceipt(data) {
     const c = this.calls.get(data.cid);
     c && c.onreceipt && c.onreceipt();
-  }
-
-  // override
-  dispatch(data) {
-    switch (data.type) {
-      case MT.REQUEST:
-        // post and
-        return new Promise((resolve, reject) => {
-          const c = {};
-
-          // to check if target alive
-          if (this.options.timeout) {
-            data.receipt = true;
-          }
-
-          // id
-          data.cid = this.calls.store(c);
-
-          // post
-          this.toMessage(data);
-
-          // to return result
-          c.onresponse = ({ cid, result, error }) => {
-            c.onreceipt && c.onreceipt();
-            this.calls.delete(cid);
-            !error ? resolve(result) : reject(error);
-          };
-
-          // check no target
-          if (this.options.timeout) {
-            let timer = setTimeout(() => {
-              reject(
-                new Error(`Timeout on request ${data.method} in ${data.target}`)
-              );
-            }, this.options.timeout);
-            // alive
-            c.onreceipt = () => {
-              if (timer) {
-                clearTimeout(timer);
-                timer = null;
-              }
-            };
-          }
-        });
-
-      case MT.EVENT:
-        // just post
-        this.toMessage(data);
-    }
   }
 
   toMessage(data, engine = null, pure = false) {
@@ -218,28 +228,4 @@ export class WorkerHandler extends Handler {
       });
     }
   }
-}
-
-/**
- * base for worker related
- */
-export class WorkerBase extends Base {
-  constructor(handler) {
-    super(handler);
-
-    // attach engine
-    this.postMessage = (...args) => handler._engine().postMessage(...args);
-
-    // to self and back
-    this.post = (event, ...args) => {
-      return handler.dispatch({
-        type: MT.EVENT,
-        method: event,
-        args
-      });
-    };
-  }
-
-  // to override
-  onmessage(event) {}
 }

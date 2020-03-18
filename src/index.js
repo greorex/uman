@@ -22,32 +22,85 @@
 
 // @ts-check
 
-import { UnitWorker } from "./adapters/dedicated";
-import { UnitSharedWorker } from "./adapters/shared";
-import { UnitServiceWorker } from "./adapters/service";
-import { default as UnitLoader } from "./loader";
+import Base from "./base";
+import Loader from "./loader";
+import Manager from "./manager";
+import Dedicated from "./adapters/dedicated";
+import Shared from "./adapters/shared";
+import Service from "./adapters/service";
+import DedicatedSelf from "./workers/dedicated";
+import SharedSelf from "./workers/shared";
+import ServiceSelf from "./workers/service";
 
-// register workers
+/**
+ * workers adapters
+ */
+
 // dedicated
+
 if (typeof Worker === "function") {
-  UnitLoader.register(UnitWorker.loader());
+  Loader.register(Dedicated.loader());
 }
+
+class UnitWorker extends Base {
+  constructor(engine) {
+    super(engine instanceof Dedicated ? engine : new Dedicated(engine));
+  }
+}
+
+class UnitWorkerSelf extends Base {
+  constructor(engine) {
+    super(new DedicatedSelf(engine));
+  }
+}
+
 // shared
+
 // @ts-ignore
 if (typeof SharedWorker === "function") {
-  UnitLoader.register(UnitSharedWorker.loader());
+  Loader.register(Shared.loader());
 }
+
+class UnitSharedWorker extends Base {
+  constructor(engine) {
+    super(engine instanceof Shared ? engine : new Shared(engine));
+  }
+}
+
+class UnitSharedWorkerSelf extends Base {
+  constructor(engine) {
+    super(new SharedSelf(engine));
+  }
+}
+
 // service
+
 if (navigator && "serviceWorker" in navigator) {
-  UnitLoader.register(UnitServiceWorker.loader());
+  Loader.register(Service.loader());
 }
+
+class UnitServiceWorker extends Base {
+  constructor(engine) {
+    super(engine instanceof Service ? engine : new Service(engine));
+  }
+}
+
+class UnitServiceWorkerSelf extends Base {
+  constructor(engine) {
+    super(new ServiceSelf(engine));
+  }
+}
+
+/**
+ * exports
+ */
 
 //@ts-ignore
 export { version, name } from "./../package.json";
 
 // basic level
 export { UnitObject } from "./object";
-export { Unit } from "./unit";
+export { default as Unit } from "./unit";
 export { UnitMain } from "./main";
 
 // expert level
@@ -56,14 +109,13 @@ export { MessageType, TargetType } from "./enums";
 export { PackagerMethod } from "./packager";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
-export { UnitsManager } from "./manager";
-export { UnitLoader };
+export { Manager as UnitsManager };
+export { Loader as UnitLoader };
+
 // adapters
 export { UnitWorker, UnitSharedWorker, UnitServiceWorker };
 // workers
-export { UnitWorkerSelf } from "./workers/dedicated";
-export { UnitSharedWorkerSelf } from "./workers/shared";
-export { UnitServiceWorkerSelf } from "./workers/service";
+export { UnitWorkerSelf, UnitSharedWorkerSelf, UnitServiceWorkerSelf };
 
 // array buffer
 export { default as LittleEndian } from "./buffer/endian";

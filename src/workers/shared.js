@@ -10,8 +10,7 @@
 
 // @ts-check
 
-import { UnitWorkerSelf } from "./dedicated";
-import { UnitServiceWorkerHandler } from "./service";
+import ServiceWorkerSelfHandler from "./service";
 
 /**
  * list of clients
@@ -52,18 +51,17 @@ class _Adapter {
 /**
  * unit base for shared worker script file
  */
-export class UnitSharedWorkerSelf extends UnitWorkerSelf {
-  constructor(handler = null) {
-    super(handler ? handler : new UnitServiceWorkerHandler(new _Adapter(self)));
+export default class SharedWorkerHandlerSelf extends ServiceWorkerSelfHandler {
+  constructor(engine) {
+    super(engine ? engine : new _Adapter(self));
   }
 
   // override
-  async _onterminate() {
+  async terminate() {
     // last active engine
-    // @ts-ignore
-    const engine = this._handler._engine();
+    const engine = this._engine();
     // stop
-    await super._onterminate();
+    await super.terminate();
     // update list
     if (engine) {
       clientsList = clientsList.filter(c => c !== engine);
