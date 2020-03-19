@@ -19,24 +19,33 @@ import WorkerHandler from "./worker";
  * Unit base for all units
  */
 export default class Base extends Emitter {
-  constructor(handler) {
+  constructor(handler, adapter = null) {
     super();
 
     // no then function
     // if promise check
     this.then = undefined;
 
-    if (!handler) {
-      handler = new Handler();
-    } else if (!(handler instanceof Handler)) {
-      throw new Error(`Handler is not a Handler based`);
+    // check
+    if (!(handler instanceof Handler)) {
+      throw new Error(`${handler} is not a Handler based`);
     }
 
-    // workers routines
+    // attach
+    this._handler = handler;
+    this.units = handler.units;
+    this.name = handler.name;
+
+    // final
+    let unit = this;
+
+    // worker?
     if (handler instanceof WorkerHandler) {
+      // standard
       this.postMessage = (...args) => handler.postMessage(...args);
       // @ts-ignore
       handler.onmessage = event => this.onmessage && this.onmessage(event);
+
       // to self and back
       this.post = (event, ...args) =>
         handler.dispatch({
@@ -44,28 +53,52 @@ export default class Base extends Emitter {
           method: event,
           args
         });
+
+      // proxy routine
+      unit = new Proxy(this, {
+        get: (t, prop) =>
+          prop in t
+            ? t[prop]
+            : (...args) =>
+                handler.dispatch({
+                  type: MT.REQUEST,
+                  target: handler.name,
+                  method: prop,
+                  args
+                })
+      });
     }
 
-    // proxy routine
-    handler._unit = new Proxy(this, {
-      get: (t, prop) =>
-        prop in t
-          ? t[prop]
-          : (...args) =>
-              handler.dispatch({
-                type: MT.REQUEST,
-                target: handler.name,
-                method: prop,
-                args
-              })
-    });
+    // adapter?
+    if (adapter) {
+      if (typeof adapter === "object") {
+        // as {}
+        if (Object.getPrototypeOf(adapter) !== Object.prototype) {
+          throw new Error(`${adapter} is not a simple object`);
+        }
+        // just copy
+        unit = Object.assign(unit, adapter);
+      } else {
+        // as class
+        if (!(typeof adapter === "function" && adapter.constructor)) {
+          throw new Error(`${adapter} is not a class`);
+        }
+        // set Base as a prototype
+        let prototype = adapter.prototype;
+        for (
+          let p = Object.getPrototypeOf(prototype);
+          p !== Object.prototype && p !== Function.prototype;
+          p = Object.getPrototypeOf(p)
+        ) {
+          prototype = p;
+        }
+        Object.setPrototypeOf(prototype, unit);
+        // create unit
+        unit = new adapter();
+      }
+    }
 
-    // attach
-    this._handler = handler;
-    this.units = handler.units;
-
-    // as proxied
-    return handler._unit;
+    return (handler._unit = unit);
   }
 
   async start(...args) {

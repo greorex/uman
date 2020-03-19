@@ -11,7 +11,6 @@
 // @ts-check
 
 import Base from "./base";
-import Handler from "./handler";
 
 /**
  * loaders by order
@@ -51,16 +50,12 @@ export default class Loader {
   }
 
   async instance() {
-    let { loader, name, adapter, ...rest } = this.params;
+    let { loader, name, ...rest } = this.params;
     for (let f of loadersQueue) {
       let result = await f({ loader, name, ...rest });
       // loaded?
       if (result instanceof Base) {
         return result;
-      }
-      // by default?
-      if (result instanceof Handler) {
-        return new (adapter ? adapter : Base)(result);
       }
       // try next
       if (result) {
@@ -71,7 +66,7 @@ export default class Loader {
     throw new Error(`Wrong class of unit: ${name}`);
   }
 
-  static instance(params) {
+  static async instance(params) {
     return new Loader(params).instance();
   }
 

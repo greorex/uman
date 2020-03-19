@@ -11,41 +11,84 @@
 // @ts-check
 
 import Base from "./base";
+import Loader from "./loader";
 import Handler from "./handler";
+import Dedicated from "./adapters/dedicated";
+import Shared from "./adapters/shared";
+import Service from "./adapters/service";
 import DedicatedSelf from "./workers/dedicated";
 import SharedSelf from "./workers/shared";
 import ServiceSelf from "./workers/service";
 
 /**
- * to initialiaze unit class on demand
+ * loaders
  */
-export default Unit => {
-  let HandlerClass = Handler;
 
+if (typeof Worker === "function") {
+  Loader.register(Dedicated.loader());
+}
+
+// @ts-ignore
+if (typeof SharedWorker === "function") {
+  Loader.register(Shared.loader());
+}
+
+if (navigator && "serviceWorker" in navigator) {
+  Loader.register(Service.loader());
+}
+
+// has to be final
+Loader.register(({ loader, adapter }) => {
+  if (loader instanceof Handler) {
+    return new Base(loader, adapter);
+  }
+});
+
+/**
+ * determines class by GlobalScope
+ */
+const autoHandlerClass = () => {
+  // auto detection
   switch ("function") {
     // @ts-ignore
     case typeof DedicatedWorkerGlobalScope:
-      HandlerClass = DedicatedSelf;
-      break;
+      return DedicatedSelf;
     // @ts-ignore
     case typeof SharedWorkerGlobalScope:
-      HandlerClass = SharedSelf;
-      break;
+      return SharedSelf;
     // @ts-ignore
     case typeof ServiceWorkerGlobalScope:
-      HandlerClass = ServiceSelf;
-      break;
+      return ServiceSelf;
   }
 
-  Object.setPrototypeOf(Unit.prototype, new Base(new HandlerClass()));
+  // default
+  return Handler;
+};
 
-  class _Unit extends Unit {
-    constructor() {
-      super();
-      // reattach
-      this._handler._unit = this;
+/**
+ * to initialiaze unit on demand
+ */
+export default unit => {
+  // as loader?
+  if (Object.getPrototypeOf(unit) === Object.prototype && unit.loader) {
+    return Loader.instance(unit);
+  } else if (
+    unit instanceof Promise ||
+    (typeof Worker === "function" && unit instanceof Worker) ||
+    // @ts-ignore
+    (typeof SharedWorker === "function" && unit instanceof SharedWorker) ||
+    (navigator && unit === navigator.serviceWorker)
+  ) {
+    return Loader.instance({ loader: unit });
+  }
+
+  // auto handled
+  class Unit extends Base {
+    constructor(handler = null) {
+      super(handler ? handler : new (autoHandlerClass())(), unit);
     }
   }
 
-  return HandlerClass === Handler ? _Unit : new _Unit();
+  // create instance only if we're in worker's script
+  return autoHandlerClass() === Handler ? Unit : new Unit();
 };

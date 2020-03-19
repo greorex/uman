@@ -1,6 +1,6 @@
 import { render, describe, test, beforeAll, expect } from "./engine";
 import { Main, Adapter } from "./classes";
-import { name, version, options, UnitLoader, PackagerMethod as PM } from "uman";
+import { name, version, options, Unit, PackagerMethod as PM } from "uman";
 
 // to debug...
 options.timeout = 0;
@@ -20,7 +20,7 @@ describe(`${name}, v${version}`, () => {
     main.add({
       log: () => import("./units/log"),
       one: () => import("worker-loader!./units/one"),
-      two: () => import("sharedworker-loader!./units/two"),
+      two: () => import("./units/two"),
       tests: () => import("sharedworker-loader!./units/tests")
       // tests: {
       //   loader: () => import("service-worker-loader!./units/tests"),
@@ -32,7 +32,7 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("no manager", async () => {
-    const unit = await UnitLoader.instance({
+    const unit = await Unit({
       loader: import("worker-loader!./units/tests.js"),
       adapter: Adapter
     });

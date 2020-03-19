@@ -22,75 +22,6 @@
 
 // @ts-check
 
-import Base from "./base";
-import Loader from "./loader";
-import Manager from "./manager";
-import Dedicated from "./adapters/dedicated";
-import Shared from "./adapters/shared";
-import Service from "./adapters/service";
-import DedicatedSelf from "./workers/dedicated";
-import SharedSelf from "./workers/shared";
-import ServiceSelf from "./workers/service";
-
-/**
- * workers adapters
- */
-
-// dedicated
-
-if (typeof Worker === "function") {
-  Loader.register(Dedicated.loader());
-}
-
-class UnitWorker extends Base {
-  constructor(engine) {
-    super(engine instanceof Dedicated ? engine : new Dedicated(engine));
-  }
-}
-
-class UnitWorkerSelf extends Base {
-  constructor(engine) {
-    super(new DedicatedSelf(engine));
-  }
-}
-
-// shared
-
-// @ts-ignore
-if (typeof SharedWorker === "function") {
-  Loader.register(Shared.loader());
-}
-
-class UnitSharedWorker extends Base {
-  constructor(engine) {
-    super(engine instanceof Shared ? engine : new Shared(engine));
-  }
-}
-
-class UnitSharedWorkerSelf extends Base {
-  constructor(engine) {
-    super(new SharedSelf(engine));
-  }
-}
-
-// service
-
-if (navigator && "serviceWorker" in navigator) {
-  Loader.register(Service.loader());
-}
-
-class UnitServiceWorker extends Base {
-  constructor(engine) {
-    super(engine instanceof Service ? engine : new Service(engine));
-  }
-}
-
-class UnitServiceWorkerSelf extends Base {
-  constructor(engine) {
-    super(new ServiceSelf(engine));
-  }
-}
-
 /**
  * exports
  */
@@ -99,9 +30,9 @@ class UnitServiceWorkerSelf extends Base {
 export { version, name } from "./../package.json";
 
 // basic level
-export { UnitObject } from "./object";
 export { default as Unit } from "./unit";
 export { UnitMain } from "./main";
+export { UnitObject } from "./object";
 
 // expert level
 export { default as options } from "./options";
@@ -109,13 +40,7 @@ export { MessageType, TargetType } from "./enums";
 export { PackagerMethod } from "./packager";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
-export { Manager as UnitsManager };
-export { Loader as UnitLoader };
-
-// adapters
-export { UnitWorker, UnitSharedWorker, UnitServiceWorker };
-// workers
-export { UnitWorkerSelf, UnitSharedWorkerSelf, UnitServiceWorkerSelf };
+export { default as UnitsManager } from "./manager";
 
 // array buffer
 export { default as LittleEndian } from "./buffer/endian";

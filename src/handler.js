@@ -72,7 +72,7 @@ export default class Handler {
 
   // to override
 
-  async start() {}
+  async start(...args) {}
 
-  async terminate() {}
+  async terminate(...args) {}
 }

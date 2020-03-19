@@ -87,7 +87,7 @@ export default class ManagerHandler extends Handler {
     for (let [name, loader] of Object.entries(units)) {
       // check duplication
       if (this.handlers[name]) {
-        throw new Error(`Unit ${loader} already exists`);
+        throw new Error(`Unit ${name} already exists`);
       }
       // check name (simple)
       switch (name) {
@@ -127,10 +127,11 @@ export default class ManagerHandler extends Handler {
     }
     // get
     let handler = this.handlers[name];
+    // loaded?
     if (handler instanceof Handler) {
       return handler;
     }
-    // load if doesn't
+    // not yet, load
     if (handler instanceof Loader) {
       return this.starter.enter(async (leave, reject) => {
         try {

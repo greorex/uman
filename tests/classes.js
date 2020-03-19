@@ -1,4 +1,4 @@
-import { UnitObject, UnitMain, UnitWorker } from "uman";
+import { UnitObject, UnitMain } from "uman";
 import { render } from "./engine";
 import { pureTest, pureSum } from "./pure";
 
@@ -15,11 +15,11 @@ export class TestsObject extends UnitObject {
 /**
  * to test adapters
  */
-export class Adapter extends UnitWorker {
+export const Adapter = {
   sum(arr) {
     return pureSum(arr);
   }
-}
+};
 
 /**
  * to test manager
@@ -40,9 +40,15 @@ export class Main extends UnitMain {
 
     if (result === "passed") {
       const t0 = performance.now();
-      for (let i = times; i--; ) await this.units.tests.pureTest(arr);
+      for (let i = times; i--; ) {
+        // call + proxy + worker + async
+        await this.units.tests.pureTest(arr);
+      }
       const t1 = performance.now();
-      for (let i = times; i--; ) pureTest(arr);
+      for (let i = times; i--; ) {
+        // call
+        pureTest(arr);
+      }
       const t2 = performance.now();
 
       const ams = d => (d / times).toFixed(3);

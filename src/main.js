@@ -20,20 +20,19 @@ export class UnitMain extends Base {
   constructor(name = "main") {
     super(new Manager());
     // attach
-    this.add({
+    // @ts-ignore
+    this._handler.add({
       [name]: this
     });
   }
+
   add(units) {
+    // @ts-ignore
     return this._handler.add(units);
   }
+
   select(filter = "all") {
+    // @ts-ignore
     return this._handler.select(filter);
   }
-  // start(name = null) {
-  //   return this._handler.start(name);
-  // }
-  // terminate(name = null) {
-  //   return this._handler.terminate(name);
-  // }
 }
