@@ -16,7 +16,7 @@ import WorkerHandler from "../worker";
 /**
  * unit handler for worker script file
  */
-export default class WorkerSelfHandler extends WorkerHandler {
+export default class DedicatedSelf extends WorkerHandler {
   constructor(engine) {
     super(engine ? engine : self);
   }

@@ -16,7 +16,7 @@ import WorkerHandler from "../worker";
 /**
  * handler to redispatch from worker unit
  */
-export default class UnitWorkerHandler extends WorkerHandler {
+export default class Dedicated extends WorkerHandler {
   constructor(worker) {
     super(worker);
   }
@@ -52,7 +52,7 @@ export default class UnitWorkerHandler extends WorkerHandler {
     return [
       ({ loader }) => {
         if (loader instanceof Worker) {
-          return new UnitWorkerHandler(loader);
+          return new Dedicated(loader);
         }
       }
     ];

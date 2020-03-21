@@ -40,20 +40,22 @@ export class Packager {
         }
       },
       _value = (k, v, replacer) => {
-        if (replacer) {
-          v = replacer(k, v);
-        }
-        // only objects
-        if (typeof v === "object" && v) {
-          if (Array.isArray(v)) {
-            for (let i = 0, l = v.length; i < l; i++) {
-              _entry(v, i, replacer);
+        // only objects and functions
+        switch (v && typeof v) {
+          case "object":
+          case "function":
+            if (replacer) {
+              v = replacer(k, v);
             }
-          } else {
-            for (let i in v) {
-              _entry(v, i, replacer);
+            if (Array.isArray(v)) {
+              for (let i = 0, l = v.length; i < l; i++) {
+                _entry(v, i, replacer);
+              }
+            } else {
+              for (let i in v) {
+                _entry(v, i, replacer);
+              }
             }
-          }
         }
         return v;
       };

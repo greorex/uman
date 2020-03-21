@@ -1,11 +1,11 @@
-import { UnitObject, UnitMain } from "uman";
+import { Unit, Emitter, Manager } from "uman";
 import { render } from "./engine";
 import { pureTest, pureSum } from "./pure";
 
 /**
  * to test objects
  */
-export class TestsObject extends UnitObject {
+export class TestsObject extends Emitter {
   sum(arr) {
     this.fire("sum", arr);
     return pureSum(arr);
@@ -24,7 +24,7 @@ export const Adapter = {
 /**
  * to test manager
  */
-export class Main extends UnitMain {
+export class Main extends Unit(Manager) {
   constructor() {
     super();
 
@@ -84,7 +84,7 @@ export class Main extends UnitMain {
     this.units.one.on("testMisconception", () => {
       this.units.post("log", "main.units.one.ontestMisconception");
     });
-    // try to pass UnitObject or Unit
+    // try to pass Object or Unit
     const result = await this.units.tests.testMisconception(
       { object, one: this.units.one },
       arr

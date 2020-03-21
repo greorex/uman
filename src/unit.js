@@ -19,6 +19,7 @@ import Service from "./adapters/service";
 import DedicatedSelf from "./workers/dedicated";
 import SharedSelf from "./workers/shared";
 import ServiceSelf from "./workers/service";
+import Manager from "./manager";
 
 /**
  * loaders
@@ -37,7 +38,7 @@ if (navigator && "serviceWorker" in navigator) {
   Loader.register(Service.loader());
 }
 
-// has to be final
+// last to catch all above
 Loader.register(({ loader, adapter }) => {
   if (loader instanceof Handler) {
     return new Base(loader, adapter);
@@ -69,20 +70,65 @@ const autoHandlerClass = () => {
  * to initialiaze unit on demand
  */
 export default unit => {
-  // as loader?
+  // as async extended loader?
   if (Object.getPrototypeOf(unit) === Object.prototype && unit.loader) {
     return Loader.instance(unit);
-  } else if (
-    unit instanceof Promise ||
-    (typeof Worker === "function" && unit instanceof Worker) ||
-    // @ts-ignore
-    (typeof SharedWorker === "function" && unit instanceof SharedWorker) ||
-    (navigator && unit === navigator.serviceWorker)
-  ) {
+  }
+
+  // as async loader?
+  if (unit instanceof Promise) {
     return Loader.instance({ loader: unit });
   }
 
-  // auto handled
+  // as worker unit?
+  if (typeof Worker === "function" && unit instanceof Worker) {
+    return class UnitWorker extends Base {
+      constructor() {
+        super(new Dedicated(unit));
+      }
+    };
+  }
+
+  // as shared worker unit?
+  // @ts-ignore
+  if (typeof SharedWorker === "function" && unit instanceof SharedWorker) {
+    return class UnitSharedWorker extends Base {
+      constructor() {
+        super(new Shared(unit));
+      }
+    };
+  }
+
+  // as service worker unit?
+  if (navigator && unit === navigator.serviceWorker) {
+    return class UnitServiceWorker extends Base {
+      constructor() {
+        super(new Service(unit));
+      }
+    };
+  }
+
+  // as Main?
+  if (unit === Manager || unit instanceof Manager) {
+    return class UnitMain extends Base {
+      constructor(name = "main") {
+        super(unit === Manager ? new Manager() : unit);
+        // @ts-ignore
+        this._handler.add({ [name]: this });
+      }
+      add(units) {
+        // @ts-ignore
+        return this._handler.add(units);
+      }
+      select(filter = "all") {
+        // @ts-ignore
+        return this._handler.select(filter);
+      }
+    };
+  }
+
+  // default
+  // as auto unit
   class Unit extends Base {
     constructor(handler = null) {
       super(handler ? handler : new (autoHandlerClass())(), unit);

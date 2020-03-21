@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import ServiceWorkerSelfHandler from "./service";
+import ServiceSelf from "./service";
 
 /**
  * list of clients
@@ -49,9 +49,9 @@ class _Adapter {
 }
 
 /**
- * unit base for shared worker script file
+ * unit handler for shared worker script file
  */
-export default class SharedWorkerHandlerSelf extends ServiceWorkerSelfHandler {
+export default class SharedSelf extends ServiceSelf {
   constructor(engine) {
     super(engine ? engine : new _Adapter(self));
   }

@@ -29,3 +29,13 @@ export const TargetType = {
   ALL: 0xff,
   THIS: 0
 };
+
+/**
+ * refernce types enum
+ */
+export const ReferenceType = {
+  OBJECT: 1,
+  FUNCTION: 2,
+  UNIT: 3,
+  TRANSFER: 4
+};

@@ -10,70 +10,7 @@
 
 // @ts-check
 
-import { MessageType as MT } from "./enums";
-import { UnitObject } from "./object";
-import { ProxyTarget } from "./proxy";
-
-// reference
-const REFERENCE = "_ref";
-// types
-const ReferenceType = {
-  OBJECT: 1,
-  FUNCTION: 2,
-  UNIT: 3
-};
-
-// alais
-const RT = ReferenceType;
-
-/**
- * creates reference object
- */
-const Reference = (type, id = null, owner = null) => {
-  const r =
-    typeof type === "object"
-      ? type
-      : {
-          type,
-          id
-        };
-  if (owner) r.owner = owner;
-  return {
-    [REFERENCE]: r
-  };
-};
-
-/**
- * to call unit object's methods
- */
-class ProxyUnitObject {
-  constructor(ref, handler) {
-    this._ref = ref;
-
-    // no then function
-    // if promise check
-    this.then = undefined;
-
-    // no toJSON
-    this.toJSON = undefined;
-
-    return new Proxy(this, {
-      get: (t, prop) =>
-        prop in t
-          ? // if own asked
-            t[prop]
-          : // unit knows
-            (...args) =>
-              handler.redispatch({
-                type: MT.REQUEST,
-                target: ref.owner,
-                handler: ref,
-                method: prop,
-                args
-              })
-    });
-  }
-}
+import { ReferenceType as RT } from "./enums";
 
 /**
  * engine to execute calls with built in cache
@@ -109,7 +46,7 @@ export default class Calls extends Map {
       case RT.OBJECT: {
         const { method, args } = data,
           o = this.get(id);
-        if (!(o instanceof UnitObject && method in o)) {
+        if (!(typeof o === "object" && method in o)) {
           throw new Error(`Wrong object for ${method} in ${owner}`);
         }
         return o[method](...args);
@@ -123,51 +60,5 @@ export default class Calls extends Map {
         return f(...data.args);
       }
     }
-  }
-
-  replacer(v) {
-    const { name } = this._handler;
-    return v instanceof UnitObject
-      ? Reference(RT.OBJECT, this.store(v), name)
-      : typeof v === "function"
-      ? Reference(RT.FUNCTION, this.store(v), name)
-      : v instanceof ProxyTarget
-      ? Reference(RT.UNIT, v._target)
-      : v instanceof ProxyUnitObject
-      ? Reference(v._ref)
-      : v;
-  }
-
-  reviver(v) {
-    if (REFERENCE in v) {
-      const handler = this._handler,
-        { name, units } = handler,
-        ref = v[REFERENCE],
-        { type, id, owner } = ref;
-
-      switch (type) {
-        case RT.OBJECT:
-          return owner === name
-            ? this.get(id)
-            : new ProxyUnitObject(ref, handler);
-
-        case RT.FUNCTION:
-          return owner === name
-            ? this.get(id)
-            : (...args) =>
-                handler.redispatch({
-                  type: MT.REQUEST,
-                  target: owner,
-                  handler: ref,
-                  args
-                });
-
-        case RT.UNIT:
-          return units[id];
-      }
-    }
-
-    // as is
-    return v;
   }
 }

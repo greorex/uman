@@ -1,8 +1,8 @@
-import { Unit, UnitObject } from "uman";
+import { Unit, Emitter } from "uman";
 
 import { pureTest, pureSum } from "./../pure";
 
-class TestsObject extends UnitObject {
+class TestsObject extends Emitter {
   sum(arr) {
     this.fire("sum", arr);
     return pureSum(arr);
@@ -68,7 +68,7 @@ export default Unit(
 
     async testMisconception({ object, one }, arr) {
       let result;
-      // test UnitObject passed
+      // test Object passed
       result = await object.sum(arr);
       if (result !== pureSum(arr)) return "failed";
       this.units.one.on("testMisconception", () => {

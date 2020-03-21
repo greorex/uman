@@ -14,7 +14,39 @@ import { MessageType as MT, TargetType as TT } from "./enums";
 import Emitter from "./emitter";
 
 /**
- * Units proxy base
+ * to call object's methods
+ */
+export class ProxyObject {
+  constructor(handler, ref) {
+    this._ref = ref;
+
+    // no then function
+    // if promise check
+    this.then = undefined;
+
+    // no toJSON
+    this.toJSON = undefined;
+
+    return new Proxy(this, {
+      get: (t, prop) =>
+        prop in t
+          ? // if own asked
+            t[prop]
+          : // unit knows
+            (...args) =>
+              handler.redispatch({
+                type: MT.REQUEST,
+                target: ref.owner,
+                handler: ref,
+                method: prop,
+                args
+              })
+    });
+  }
+}
+
+/**
+ * units proxy base
  */
 class ProxyBase extends Emitter {
   constructor(handler, target) {
@@ -41,7 +73,7 @@ class ProxyBase extends Emitter {
 }
 
 /**
- * Units proxy target engine
+ * units proxy target engine
  */
 export class ProxyTarget extends ProxyBase {
   constructor(handler, target) {

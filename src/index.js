@@ -31,16 +31,15 @@ export { version, name } from "./../package.json";
 
 // basic level
 export { default as Unit } from "./unit";
-export { UnitMain } from "./main";
-export { UnitObject } from "./object";
+export { default as Manager } from "./manager";
 
 // expert level
 export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
 export { PackagerMethod } from "./packager";
+export { default as Emitter } from "./emitter";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
-export { default as UnitsManager } from "./manager";
 
 // array buffer
 export { default as LittleEndian } from "./buffer/endian";

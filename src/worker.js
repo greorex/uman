@@ -10,16 +10,34 @@
 
 // @ts-check
 
-import { MessageType as MT } from "./enums";
+import { MessageType as MT, ReferenceType as RT } from "./enums";
 import { Packager, PackagerMethod as PM } from "./packager";
+import { ProxyObject, ProxyTarget } from "./proxy";
 import Handler from "./handler";
 
 // locals
 const SIGNATURE = "_uman";
-const TRANSFER = "_transfer";
+const REFERENCE = "_ref";
 
 // if supported
 const _offscreenCanvas = typeof OffscreenCanvas === "function";
+
+/**
+ * reference object to transfer
+ */
+const Reference = (type, id = null, owner = null) => {
+  const r =
+    typeof type === "object"
+      ? type
+      : {
+          type,
+          id
+        };
+  if (owner) r.owner = owner;
+  return {
+    [REFERENCE]: r
+  };
+};
 
 /**
  * worker communication engine
@@ -179,26 +197,46 @@ export default class WorkerHandler extends Handler {
   toMessage(data, engine = null, pure = false) {
     let id = 0;
     const transfer = [],
+      { name } = this.calls._handler,
       method = pure ? PM.PURE : this.options.packager;
 
     // pack
     transfer[0] = this.packager.pack(method, data, (_, v) => {
       switch (v && typeof v) {
-        case "function":
         case "object":
-          v = this.calls.replacer(v);
-          // transfer?
+          // can be cloned?
+          if (
+            Object.getPrototypeOf(v) === Object.prototype ||
+            Array.isArray(v) ||
+            v instanceof Date ||
+            v instanceof RegExp ||
+            v instanceof Map ||
+            v instanceof Set
+          ) {
+            break;
+          }
+
+          // can be transfered?
           if (
             v instanceof ArrayBuffer ||
             v instanceof ImageBitmap ||
             (_offscreenCanvas && v instanceof OffscreenCanvas)
           ) {
             transfer[++id] = v;
-            v = {
-              [TRANSFER]: id
-            };
+            return Reference(RT.TRANSFER, id);
           }
+
+          // other
+          return v instanceof ProxyObject
+            ? Reference(v._ref)
+            : v instanceof ProxyTarget
+            ? Reference(RT.UNIT, v._target)
+            : Reference(RT.OBJECT, this.calls.store(v), name);
+
+        case "function":
+          return Reference(RT.FUNCTION, this.calls.store(v), name);
       }
+
       return v;
     });
 
@@ -217,13 +255,40 @@ export default class WorkerHandler extends Handler {
 
     // from args, with transferables
     if (Array.isArray(data) && data.length) {
+      const handler = this.calls._handler,
+        { name, units } = handler;
+
       return this.packager.unpack(data[0], (_, v) => {
-        if (typeof v === "object" && v) {
-          if (TRANSFER in v) {
-            v = data[v[TRANSFER]];
+        if (typeof v === "object" && v && REFERENCE in v) {
+          const ref = v[REFERENCE],
+            { type, id, owner } = ref;
+
+          switch (type) {
+            case RT.OBJECT:
+              return owner === name
+                ? this.calls.get(id)
+                : new ProxyObject(handler, ref);
+
+            case RT.FUNCTION:
+              return owner === name
+                ? this.calls.get(id)
+                : (...args) =>
+                    handler.redispatch({
+                      type: MT.REQUEST,
+                      target: owner,
+                      handler: ref,
+                      args
+                    });
+
+            case RT.UNIT:
+              return units[id];
+
+            case RT.TRANSFER:
+              return data[id];
           }
-          v = this.calls.reviver(v);
         }
+
+        // as is
         return v;
       });
     }

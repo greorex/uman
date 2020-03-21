@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import WorkerSelfHandler from "./dedicated";
+import DedicatedSelf from "./dedicated";
 
 /**
  * local service worker adapter
@@ -50,7 +50,7 @@ class _Adapter {
 /**
  * unit handler for service worker script file
  */
-export default class ServiceWorkerSelfHandler extends WorkerSelfHandler {
+export default class ServiceSelf extends DedicatedSelf {
   constructor(engine) {
     super(engine ? engine : new _Adapter(self));
 

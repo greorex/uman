@@ -10,7 +10,7 @@
 
 // @ts-check
 
-import UnitWorkerHandler from "./dedicated";
+import Dedicated from "./dedicated";
 import Options from "../options";
 
 /**
@@ -37,7 +37,7 @@ class _Adapter {
  * handler for service worker adapter
  */
 // @ts-ignore
-export default class UnitServiceWorkerHandler extends UnitWorkerHandler {
+export default class Service extends Dedicated {
   constructor(worker) {
     super(new _Adapter(worker));
   }
@@ -88,7 +88,7 @@ export default class UnitServiceWorkerHandler extends UnitWorkerHandler {
           if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
           }
-          return new UnitServiceWorkerHandler(loader);
+          return new Service(loader);
         }
       }
     ];
