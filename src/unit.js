@@ -21,20 +21,25 @@ import SharedSelf from "./workers/shared";
 import ServiceSelf from "./workers/service";
 import Manager from "./manager";
 
+// if supported
+const _dedicated = typeof Worker === "function",
+  // @ts-ignore
+  _shared = typeof SharedWorker === "function",
+  _service = navigator && "serviceWorker" in navigator;
+
 /**
  * loaders
  */
 
-if (typeof Worker === "function") {
+if (_dedicated) {
   Loader.register(Dedicated.loader());
 }
 
-// @ts-ignore
-if (typeof SharedWorker === "function") {
+if (_shared) {
   Loader.register(Shared.loader());
 }
 
-if (navigator && "serviceWorker" in navigator) {
+if (_service) {
   Loader.register(Service.loader());
 }
 
@@ -69,60 +74,59 @@ const autoHandlerClass = () => {
 /**
  * to initialiaze unit on demand
  */
-export default unit => {
+export default value => {
   // as async extended loader?
-  if (Object.getPrototypeOf(unit) === Object.prototype && unit.loader) {
-    return Loader.instance(unit);
+  if (Object.getPrototypeOf(value) === Object.prototype && value.loader) {
+    return Loader.instance(value);
   }
 
   // as async loader?
-  if (unit instanceof Promise) {
-    return Loader.instance({ loader: unit });
+  if (value instanceof Promise) {
+    return Loader.instance({ loader: value });
   }
 
   // as worker unit?
-  if (typeof Worker === "function" && unit instanceof Worker) {
+  if (_dedicated && value instanceof Worker) {
     return class UnitWorker extends Base {
       constructor() {
-        super(new Dedicated(unit));
+        super(new Dedicated(value));
       }
     };
   }
 
   // as shared worker unit?
   // @ts-ignore
-  if (typeof SharedWorker === "function" && unit instanceof SharedWorker) {
+  if (_shared && value instanceof SharedWorker) {
     return class UnitSharedWorker extends Base {
       constructor() {
-        super(new Shared(unit));
+        super(new Shared(value));
       }
     };
   }
 
   // as service worker unit?
-  if (navigator && unit === navigator.serviceWorker) {
+  if (_service && value === navigator.serviceWorker) {
     return class UnitServiceWorker extends Base {
       constructor() {
-        super(new Service(unit));
+        super(new Service(value));
       }
     };
   }
 
   // as Main?
-  if (unit === Manager || unit instanceof Manager) {
+  if (value === Manager || value instanceof Manager) {
     return class UnitMain extends Base {
       constructor(name = "main") {
-        super(unit === Manager ? new Manager() : unit);
-        // @ts-ignore
-        this._handler.add({ [name]: this });
-      }
-      add(units) {
-        // @ts-ignore
-        return this._handler.add(units);
-      }
-      select(filter = "all") {
-        // @ts-ignore
-        return this._handler.select(filter);
+        const handler = value === Manager ? new Manager() : value;
+
+        super(handler);
+
+        // set it up
+        this.add = units => handler.add(units);
+        this.select = (filter = "all") => handler.select(filter);
+
+        // attach
+        handler.add({ [name]: this });
       }
     };
   }
@@ -131,7 +135,7 @@ export default unit => {
   // as auto unit
   class Unit extends Base {
     constructor(handler = null) {
-      super(handler ? handler : new (autoHandlerClass())(), unit);
+      super(handler ? handler : new (autoHandlerClass())(), value);
     }
   }
 

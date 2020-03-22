@@ -26,16 +26,16 @@ export default class DedicatedSelf extends WorkerHandler {
   oncall(data) {
     switch (data.type) {
       case MT.START: {
-        const [name, options] = data.args;
+        const [name, options, ...args] = data.args;
         // set it up
         this._unit.name = this.name = name;
         this.options = { ...options };
         // run
-        return this._unit.start();
+        return this._unit.start(...args);
       }
       case MT.TERMINATE:
         // stop
-        return this._unit.terminate();
+        return this._unit.terminate(...data.args);
     }
 
     return super.oncall(data);

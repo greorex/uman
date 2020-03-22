@@ -20,7 +20,9 @@ const SIGNATURE = "_uman";
 const REFERENCE = "_ref";
 
 // if supported
-const _offscreenCanvas = typeof OffscreenCanvas === "function";
+const _offscreenCanvas = typeof OffscreenCanvas === "function",
+  _bigUint64Array = typeof BigUint64Array === "function",
+  _bigInt64Array = typeof BigInt64Array === "function";
 
 /**
  * reference object to transfer
@@ -62,19 +64,17 @@ export default class WorkerHandler extends Handler {
       const data = this.fromEvent(event);
 
       // uman's ?
-      if (data) {
-        switch (data.type) {
-          case MT.EVENT:
-            return this.onevent(data);
-          case MT.REQUEST:
-          case MT.START:
-          case MT.TERMINATE:
-            return this.onrequest(data);
-          case MT.RESPONSE:
-            return this.onresponse(data);
-          case MT.RECEIPT:
-            return this.onreceipt(data);
-        }
+      switch (data && data.type) {
+        case MT.REQUEST:
+        case MT.START:
+        case MT.TERMINATE:
+          return this.onrequest(data);
+        case MT.RESPONSE:
+          return this.onresponse(data);
+        case MT.EVENT:
+          return this.onevent(data);
+        case MT.RECEIPT:
+          return this.onreceipt(data);
       }
 
       // standard?
@@ -91,10 +91,11 @@ export default class WorkerHandler extends Handler {
       case MT.TERMINATE:
         // post and
         return new Promise((resolve, reject) => {
-          const c = {};
+          const { timeout } = this.options,
+            c = {};
 
           // to check if target alive
-          if (this.options.timeout) {
+          if (timeout) {
             data.receipt = true;
           }
 
@@ -106,25 +107,18 @@ export default class WorkerHandler extends Handler {
 
           // to return result
           c.onresponse = ({ cid, result, error }) => {
-            c.onreceipt && c.onreceipt();
+            c.timeout && clearTimeout(c.timeout);
             this.calls.delete(cid);
             !error ? resolve(result) : reject(error);
           };
 
           // check no target
-          if (this.options.timeout) {
-            let timer = setTimeout(() => {
+          if (timeout) {
+            c.timeout = setTimeout(() => {
               reject(
                 new Error(`Timeout on request ${data.method} in ${data.target}`)
               );
-            }, this.options.timeout);
-            // alive
-            c.onreceipt = () => {
-              if (timer) {
-                clearTimeout(timer);
-                timer = null;
-              }
-            };
+            }, timeout);
           }
         });
 
@@ -191,7 +185,7 @@ export default class WorkerHandler extends Handler {
 
   onreceipt(data) {
     const c = this.calls.get(data.cid);
-    c && c.onreceipt && c.onreceipt();
+    c && c.timeout && clearTimeout(c.timeout);
   }
 
   toMessage(data, engine = null, pure = false) {
@@ -204,19 +198,44 @@ export default class WorkerHandler extends Handler {
     transfer[0] = this.packager.pack(method, data, (_, v) => {
       switch (v && typeof v) {
         case "object":
-          // can be cloned?
+          // plain obejcts can be cloned
           if (
             Object.getPrototypeOf(v) === Object.prototype ||
-            Array.isArray(v) ||
-            v instanceof Date ||
-            v instanceof RegExp ||
-            v instanceof Map ||
-            v instanceof Set
+            Array.isArray(v)
           ) {
             break;
           }
 
-          // can be transfered?
+          // can be cloned by structured clone algorithm
+          if (
+            method === PM.OBJECT &&
+            (v instanceof Boolean ||
+              v instanceof String ||
+              v instanceof Date ||
+              v instanceof RegExp ||
+              v instanceof Map ||
+              v instanceof Set ||
+              v instanceof Blob ||
+              v instanceof File ||
+              v instanceof FileList ||
+              v instanceof ImageData ||
+              // typed arrays
+              v instanceof Uint8Array ||
+              v instanceof Uint8ClampedArray ||
+              v instanceof Int8Array ||
+              v instanceof Uint16Array ||
+              v instanceof Int16Array ||
+              v instanceof Uint32Array ||
+              v instanceof Int32Array ||
+              v instanceof Float32Array ||
+              v instanceof Float64Array ||
+              (_bigUint64Array && v instanceof BigUint64Array) ||
+              (_bigInt64Array && v instanceof BigInt64Array))
+          ) {
+            break;
+          }
+
+          // can be transfered
           if (
             v instanceof ArrayBuffer ||
             v instanceof ImageBitmap ||
@@ -226,7 +245,7 @@ export default class WorkerHandler extends Handler {
             return Reference(RT.TRANSFER, id);
           }
 
-          // other
+          // others
           return v instanceof ProxyObject
             ? Reference(v._ref)
             : v instanceof ProxyTarget

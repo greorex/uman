@@ -3,7 +3,7 @@ import { Main, Adapter } from "./classes";
 import { name, version, options, Unit, PackagerMethod as PM } from "uman";
 
 // to debug...
-options.timeout = 0;
+// options.timeout = 0;
 options.packager = PM.OBJECT;
 
 /**

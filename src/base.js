@@ -31,10 +31,15 @@ export default class Base extends Emitter {
       throw new Error(`${handler} is not a Handler based`);
     }
 
+    // set it up
+    this.name = handler.name;
+    this.units = handler.units;
+    this.options = handler.options;
+    this.start = async (...args) => handler.start(...args);
+    this.terminate = async (...args) => handler.terminate(...args);
+
     // attach
     this._handler = handler;
-    this.units = handler.units;
-    this.name = handler.name;
 
     // final
     let unit = this;
@@ -99,12 +104,5 @@ export default class Base extends Emitter {
     }
 
     return (handler._unit = unit);
-  }
-
-  async start(...args) {
-    return this._handler.start(...args);
-  }
-  async terminate(...args) {
-    return this._handler.terminate(...args);
   }
 }

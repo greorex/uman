@@ -24,8 +24,8 @@ export default class Handler {
     this.calls = new Calls(this);
     this.units = new ProxyUnits(this);
     // to be set
-    this._unit = null;
     this.name = "";
+    this._unit = null;
   }
 
   dispatch(data) {

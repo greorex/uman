@@ -24,16 +24,17 @@ export default class Dedicated extends WorkerHandler {
   // override
 
   // to tell worker script
-  async start() {
+  async start(...args) {
     return this.dispatch({
       type: MT.START,
-      args: [this.name, this.options]
+      args: [this.name, this.options, ...args]
     });
   }
 
-  async terminate() {
+  async terminate(...args) {
     await this.dispatch({
-      type: MT.TERMINATE
+      type: MT.TERMINATE,
+      args
     });
     // stop it
     this._engine().terminate();
