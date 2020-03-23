@@ -42,6 +42,62 @@ const Reference = (type, id = null, owner = null) => {
 };
 
 /**
+ * instead of many setTimeouts
+ */
+class Timeouts {
+  constructor(intervals = 1000) {
+    this.intervals = intervals;
+  }
+
+  set(callback, timeout) {
+    // storage
+    if (!this.timeouts) {
+      this.timeouts = new Set();
+    }
+
+    // engine
+    if (!this.timer) {
+      this.timer = setInterval(() => {
+        if (this.timeouts.size) {
+          const stamp = Date.now();
+
+          for (const c of this.timeouts) {
+            if (stamp - c.stamp > c.timeout) {
+              const { callback } = c;
+
+              this.timeouts.delete(c);
+              callback();
+            }
+          }
+        } else {
+          this.clear();
+        }
+      }, this.intervals);
+    }
+
+    // timer
+    const c = {
+      stamp: Date.now(),
+      timeout,
+      callback
+    };
+
+    this.timeouts.add(c);
+
+    return c;
+  }
+
+  clear(id = null) {
+    if (id) {
+      this.timeouts.delete(id);
+    } else if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
+/**
  * worker communication engine
  */
 export default class WorkerHandler extends Handler {
@@ -53,6 +109,9 @@ export default class WorkerHandler extends Handler {
 
     // packager
     this.packager = new Packager(SIGNATURE);
+
+    // timeouts
+    this.timeouts = new Timeouts();
 
     // attach engine (worker or worker self instance)
     // arguments to support transferable objects
@@ -84,6 +143,11 @@ export default class WorkerHandler extends Handler {
   }
 
   // override
+
+  async terminate(...args) {
+    this.timeouts.clear();
+  }
+
   dispatch(data) {
     switch (data.type) {
       case MT.REQUEST:
@@ -96,7 +160,7 @@ export default class WorkerHandler extends Handler {
 
           // to check if target alive
           if (timeout) {
-            data.receipt = true;
+            data.timeout = timeout;
           }
 
           // id
@@ -105,21 +169,22 @@ export default class WorkerHandler extends Handler {
           // post
           this.toMessage(data);
 
-          // to return result
-          c.onresponse = ({ cid, result, error }) => {
-            c.timeout && clearTimeout(c.timeout);
-            this.calls.delete(cid);
-            !error ? resolve(result) : reject(error);
-          };
-
           // check no target
           if (timeout) {
-            c.timeout = setTimeout(() => {
+            const timer = this.timeouts.set(() => {
               reject(
                 new Error(`Timeout on request ${data.method} in ${data.target}`)
               );
             }, timeout);
+            c.onreceipt = () => this.timeouts.clear(timer);
           }
+
+          // to return result
+          c.onresponse = ({ cid, result, error }) => {
+            this.calls.delete(cid);
+            c.onreceipt && c.onreceipt();
+            !error ? resolve(result) : reject(error);
+          };
         });
 
       case MT.EVENT:
@@ -130,49 +195,35 @@ export default class WorkerHandler extends Handler {
 
   // to override
 
-  onrequest(data) {
-    const { cid } = data,
-      _engine = this._engine(),
-      promises = [];
+  async onrequest(data) {
+    const c = {},
+      { cid } = data,
+      _engine = this._engine();
 
-    // call
-    promises.push(
-      new Promise(async resolve => {
+    if (data.timeout) {
+      const timer = this.timeouts.set(() => {
         const r = {
-          type: MT.RESPONSE,
+          type: MT.RECEIPT,
           cid
         };
-
-        try {
-          r.result = await this.calls.oncall(data, this);
-        } catch (error) {
-          r.error = error;
-        }
-
-        this.toMessage(r, _engine, r.error);
-
-        resolve();
-      })
-    );
-
-    if (data.receipt) {
-      // alive
-      promises.push(
-        new Promise(resolve => {
-          const r = {
-            type: MT.RECEIPT,
-            cid
-          };
-
-          this.toMessage(r, _engine, true);
-
-          resolve();
-        })
-      );
+        this.toMessage(r, _engine, true);
+      }, data.timeout / 2);
+      c.noreceipt = () => this.timeouts.clear(timer);
     }
 
-    // in parallel
-    Promise.all(promises);
+    const r = {
+      type: MT.RESPONSE,
+      cid
+    };
+
+    try {
+      r.result = await this.calls.oncall(data, this);
+    } catch (error) {
+      r.error = error;
+    }
+
+    c.noreceipt && c.noreceipt();
+    this.toMessage(r, _engine, r.error);
   }
 
   onresponse(data) {
@@ -185,7 +236,7 @@ export default class WorkerHandler extends Handler {
 
   onreceipt(data) {
     const c = this.calls.get(data.cid);
-    c && c.timeout && clearTimeout(c.timeout);
+    c && c.onreceipt && c.onreceipt();
   }
 
   toMessage(data, engine = null, pure = false) {

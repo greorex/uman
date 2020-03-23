@@ -25,7 +25,7 @@ class _Adapter {
     // to all controlled clients
     this.postMessage = (...args) => {
       engine.clients.matchAll().then(clients => {
-        for (let client of clients) {
+        for (const client of clients) {
           client.postMessage(...args);
         }
       });

@@ -87,7 +87,7 @@ export class ValueEncoder {
               }
             } else {
               out.byte(VT.OBJECT);
-              for (let i in v) {
+              for (const i in v) {
                 _entry(i, v[i], replacer, true);
               }
             }

@@ -36,9 +36,10 @@ export default class Emitter {
     // emits event
     this.fire = (event, ...args) => {
       const el = _listeners[event];
-      if (!el) return;
-      for (let f of el) {
-        f(...args);
+      if (el) {
+        for (const f of el) {
+          f(...args);
+        }
       }
     };
   }

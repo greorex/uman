@@ -31,13 +31,21 @@ export default class DedicatedSelf extends WorkerHandler {
         this._unit.name = this.name = name;
         this.options = { ...options };
         // run
-        return this._unit.start(...args);
+        return this.start(...args);
       }
       case MT.TERMINATE:
         // stop
-        return this._unit.terminate(...data.args);
+        return this.terminate(...data.args);
     }
 
     return super.oncall(data);
+  }
+
+  async start(...args) {
+    return this._unit.start(...args);
+  }
+
+  async terminate(...args) {
+    return this._unit.terminate(...args);
   }
 }

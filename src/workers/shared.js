@@ -15,7 +15,7 @@ import ServiceSelf from "./service";
 /**
  * list of clients
  */
-let clientsList = [];
+const clientsList = new Set();
 
 /**
  * local shared worker adapter
@@ -24,7 +24,7 @@ class _Adapter {
   constructor(engine) {
     // to all clients
     this.postMessage = (...args) => {
-      for (let port of clientsList) {
+      for (const port of clientsList) {
         port.postMessage(...args);
       }
     };
@@ -43,7 +43,7 @@ class _Adapter {
       port.start();
 
       // to broadcast
-      clientsList.push(port);
+      clientsList.add(port);
     });
   }
 }
@@ -64,9 +64,9 @@ export default class SharedSelf extends ServiceSelf {
     await super.terminate();
     // update list
     if (engine) {
-      clientsList = clientsList.filter(c => c !== engine);
+      clientsList.delete(engine);
       // no clients, terminate
-      if (!clientsList.length) {
+      if (!clientsList.size) {
         close();
       }
     }

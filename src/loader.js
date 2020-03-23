@@ -51,7 +51,7 @@ export default class Loader {
 
   async instance() {
     let { loader, name, ...rest } = this.params;
-    for (let f of loadersQueue) {
+    for (const f of loadersQueue) {
       let result = await f({ loader, name, ...rest });
       // loaded?
       if (result instanceof Base) {
@@ -72,7 +72,7 @@ export default class Loader {
 
   static register(loader) {
     if (Array.isArray(loader)) {
-      for (let l of loader) {
+      for (const l of loader) {
         Loader.register(l);
       }
     } else if (!loadersQueue.includes(loader)) {

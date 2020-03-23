@@ -51,7 +51,7 @@ export default class ManagerHandler extends Handler {
     switch (target) {
       case TT.ALL:
         // to all loaded except sender
-        for (let [name, handler] of Object.entries(this.handlers)) {
+        for (const [name, handler] of Object.entries(this.handlers)) {
           if (name !== sender && handler instanceof Handler) {
             handler.dispatch(data);
           }
@@ -156,7 +156,7 @@ export default class ManagerHandler extends Handler {
       delete this.handlers[name];
     } else {
       // all but this
-      for (let [key, handler] of Object.entries(this.handlers)) {
+      for (const [key, handler] of Object.entries(this.handlers)) {
         if (handler !== this) {
           await this.terminate(key);
         }

@@ -36,8 +36,8 @@ export default class Dedicated extends WorkerHandler {
       type: MT.TERMINATE,
       args
     });
-    // stop it
     this._engine().terminate();
+    return super.terminate(...args);
   }
 
   // to redispatch

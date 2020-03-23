@@ -52,7 +52,7 @@ export class Packager {
                 _entry(v, i, replacer);
               }
             } else {
-              for (let i in v) {
+              for (const i in v) {
                 _entry(v, i, replacer);
               }
             }
