@@ -29,11 +29,11 @@ export default Unit(
       return new OneObject();
     }
 
-    start() {
+    onstart() {
       console.log("one started");
     }
 
-    terminate() {
+    onterminate() {
       console.log("one terminated");
     }
   }

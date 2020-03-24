@@ -105,4 +105,8 @@ export default class Base extends Emitter {
 
     return (handler._unit = unit);
   }
+
+  // system events
+  async onstart(...args) {}
+  async onterminate(...args) {}
 }

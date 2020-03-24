@@ -97,11 +97,11 @@ export default Unit(
       return new TestsObject();
     }
 
-    start() {
+    onstart() {
       console.log("tests started");
     }
 
-    terminate() {
+    onterminate() {
       console.log("tests terminated");
     }
   }

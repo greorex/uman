@@ -72,7 +72,11 @@ export default class Handler {
 
   // to override
 
-  async start(...args) {}
+  async start(...args) {
+    return this._unit.onstart(...args);
+  }
 
-  async terminate(...args) {}
+  async terminate(...args) {
+    return this._unit.onterminate(...args);
+  }
 }
