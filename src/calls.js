@@ -46,17 +46,21 @@ export default class Calls extends Map {
       case RT.OBJECT: {
         const { method, args } = data,
           o = this.get(id);
+
         if (!(typeof o === "object" && method in o)) {
           throw new Error(`Wrong object for ${method} in ${owner}`);
         }
+
         return o[method](...args);
       }
 
       case RT.FUNCTION: {
         const f = this.get(id);
+
         if (typeof f !== "function") {
           throw new Error(`Wrong function reference in ${owner}`);
         }
+
         return f(...data.args);
       }
     }

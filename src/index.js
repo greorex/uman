@@ -32,12 +32,12 @@ export { version, name } from "./../package.json";
 // basic level
 export { default as Unit } from "./unit";
 export { default as Manager } from "./manager";
+export { default as Emitter } from "./emitter";
 
 // expert level
 export { default as options } from "./options";
 export { MessageType, TargetType } from "./enums";
 export { PackagerMethod } from "./packager";
-export { default as Emitter } from "./emitter";
 export { default as CriticalSection } from "./critical";
 export { default as Throttler } from "./throttler";
 

@@ -18,9 +18,11 @@ import Dedicated from "./dedicated";
 class _Adapter {
   constructor(worker) {
     const port = worker.port;
+
     if (!(port && typeof port.postMessage === "function")) {
       throw new Error(`There is no 'postMessage' in ${worker}`);
     }
+
     this.postMessage = (...args) => port.postMessage(...args);
     // @ts-ignore
     port.addEventListener("message", event => this.onmessage(event));

@@ -2,7 +2,7 @@ import { Main } from "./classes";
 import { name, version } from "uman";
 
 /**
- * tests
+ * tests with jest
  */
 describe(`${name}, v${version}`, () => {
   let main;

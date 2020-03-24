@@ -19,9 +19,11 @@ import Options from "../options";
 class _Adapter {
   constructor(worker) {
     const controller = worker.controller;
+
     if (!(controller && controller.postMessage === "function")) {
       throw new Error(`There is no 'postMessage' in ${worker}`);
     }
+
     this.postMessage = (...args) => controller.postMessage(...args);
     // @ts-ignore
     worker.addEventListener("message", event => this.onmessage(event));
@@ -64,6 +66,7 @@ export default class Service extends Dedicated {
           } else {
             throw new Error(`There is no service worker for ${name}`);
           }
+
           // done but
           return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
@@ -88,6 +91,7 @@ export default class Service extends Dedicated {
           if (!loader.controller) {
             throw new Error(`There is no active service worker for: ${name}`);
           }
+
           return new Service(loader);
         }
       }

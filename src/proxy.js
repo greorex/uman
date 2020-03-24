@@ -112,7 +112,7 @@ export default class extends ProxyBase {
       get: (t, prop) => {
         let value = t[prop];
         if (!value) {
-          // asume "other" asked
+          // "other" asked
           value = new ProxyTarget(handler, prop);
           t[prop] = value;
         }

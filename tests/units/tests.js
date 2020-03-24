@@ -68,7 +68,7 @@ export default Unit(
 
     async testMisconception({ object, one }, arr) {
       let result;
-      // test Object passed
+      // test object passed
       result = await object.sum(arr);
       if (result !== pureSum(arr)) return "failed";
       this.units.one.on("testMisconception", () => {
