@@ -146,6 +146,7 @@ export default class WorkerHandler extends Handler {
 
   async terminate(...args) {
     this.timeouts.clear();
+    return super.terminate(...args);
   }
 
   dispatch(data) {

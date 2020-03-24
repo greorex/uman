@@ -112,16 +112,16 @@ class MyUnit {
 export default Unit(MyUnit);
 ```
 
-You may define these methods:
+You may also use these methods:
 
 ```javascript
 // to initialize unit
-async start() {
+async onstart() {
   await loading...
 }
 
 // to finalize unit
-async terminate() {
+async onterminate() {
   await unloading...
 }
 ```

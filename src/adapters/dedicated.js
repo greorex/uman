@@ -25,6 +25,7 @@ export default class Dedicated extends WorkerHandler {
 
   // to tell worker script
   async start(...args) {
+    await super.start(...args);
     return this.dispatch({
       type: MT.START,
       args: [this.name, this.options, ...args]

@@ -7,11 +7,11 @@ export default Unit(
       return arr.map(i => i ** 3);
     }
 
-    start() {
+    onstart() {
       console.log("two started");
     }
 
-    terminate() {
+    onterminate() {
       console.log("two terminated");
     }
   }
