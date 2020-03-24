@@ -71,11 +71,14 @@ const result = await unit.dothings(...args);
 `unit.js`
 
 ```javascript
-// reply
-unit.dothings = (...args) => {
-  // do things, reply
-  return result;
-};
+export default Unit(
+  class {
+    dothings(...args) {
+      // do things, reply
+      return result;
+    }
+  }
+);
 ```
 
 To run tasks in separate workers and communicate between them:
@@ -108,8 +111,8 @@ main.units.one.task(...args);
 `one.js`
 
 ```javascript
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     async task(...args) {
       const { two, six, ten } = this.units;
       // ask other workers to do things
@@ -127,8 +130,8 @@ export default Unit.instance(
 `two.js`, `six.js` or `ten.js`
 
 ```javascript
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     async dothings(...args) {
       // do things, reply
       return await something...

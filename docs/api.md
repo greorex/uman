@@ -14,20 +14,16 @@ How to:
 Engine:
 
 - [Unit](#unit)
-- [UnitsManager](#units_manager)
+- [Manager](#units_manager)
 - property: [units](#units)
 
 Special:
 
-- [UnitMain](#unit_main)
-- [UnitObject](#unit_object)
-- [Transferable](#transferable)
-
-[Adapters](#adapters):
-
-- [UnitWorker](#unit_worker)
-- [UnitSharedWorker](#unit_shared_worker)
-- [UnitServiceWorker](#unit_service_worker)
+- [Main](#unit_main)
+- [Objects](#unit_object)
+- [Emitters](#unit_emitter)
+- [Transferables](#transferable)
+- [Adapters](#adapters)
 
 ## Engine
 
@@ -38,9 +34,12 @@ Special:
 Class to create manager.
 
 ```typescript
-UnitsManager(units?: Object); // see add
+Manager(units?: Object); // see add
+```
 
-// to add other units
+To register units:
+
+```typescript
 add(units: Object like {
   // units:
   // 1) instantiated
@@ -63,10 +62,12 @@ By default units are lazy if they are not instantiated. The manager loads them o
 But you may do that yourself with:
 
 ```typescript
-// to load unit
 async start(name: string)
+```
 
-// or terminate it
+To terminate unit:
+
+```typescript
 async terminate(name?: string) // all by default
 ```
 
@@ -74,10 +75,10 @@ async terminate(name?: string) // all by default
 
 ### Unit
 
-Class to create unit.
+Factory to create unit.
 
-```javascript
-Unit();
+```typescript
+Unit(value: class);
 ```
 
 Please follow the syntax to have the unit as universal.
@@ -85,8 +86,8 @@ Please follow the syntax to have the unit as universal.
 Inplace export
 
 ```typescript
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     // your ES6+ class
     method(...args: any) {
       // do things
@@ -104,36 +105,30 @@ export default Unit.instance(
 or
 
 ```typescript
-class MyUnit extends Unit {
+class MyUnit {
   // your ES6+ class
 }
 
-export default Unit.instance(MyUnit);
+export default Unit(MyUnit);
 ```
 
-You may override these methods:
+You may define these methods:
 
 ```javascript
+// to initialize unit
 async start() {
-  // to initialize unit
   await loading...
 }
 
+// to finalize unit
 async terminate() {
-  // to finalize unit
   await unloading...
 }
 ```
 
 Use [units](#units) property to access other units.
 
-Also you have to read about [UnitObject](#unit_object)s.
-
-The base class for the script part will depend on how the unit is [instantiated](#units_manager):
-
-- [UnitWorkerSelf](#unit_worker) - as dedicated worker with _Worker_
-- [UnitSharedWorkerSelf](#unit_shared_worker) - as shared worker with _SharedWorker_
-- [UnitServiceWorkerSelf](#unit_service_worker) - as service worker with _ServiceWorker_
+Also you have to read about [Objects](#unit_object), [Transferables](#transferable) and [Adapters](#adapters).
 
 If you'd like to load the unit into the main thread you have to `import` it as ES6+ module and instantiate with `new`.
 
@@ -152,8 +147,6 @@ To call "method" of "other" unit:
 ```typescript
 await this.units.other.method(...args: any);
 ```
-
-> Note, there might be timeout error in case no answer.
 
 To catch "event" from all units:
 
@@ -186,39 +179,50 @@ this.units.other.post(event: string, ...args: any);
 
 <a name="unit_main"></a>
 
-### UnitMain
+### Main
 
-Class to create the main unit with built in manager. Being a [Unit](#unit) it extends [UnitsManager](#units_manager) to orchestrate all other units and helps to write less code.
+To create the main unit with built in manager use the following syntax:
 
 ```typescript
-UnitMain(name?: string); // "main" by default
+class Main extends Unit(Manager) {
+  // your main unit code
+  constructor() {
+    super(name?: string) // "main" by default
+  }
+}
 ```
+
+Being a [Unit](#unit) it extends [Manager](#units_manager) functionality to orchestrate all other units and helps to write less code.
 
 <a name="unit_object"></a>
 
-### UnitObject
+### Objects
 
-Due to [structured clone algorithm](https://developer.mozilla.org/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) you are not allowed to transfer complex types between workers, such as objects with methods or functions.
+Due to [structured clone algorithm](https://developer.mozilla.org/docs/Web/API/Web_Workers_API/Structured_clone_algorithm) you are restricted to transfer complex types between workers, such as objects with methods or functions.
 
 But with the _Uman_ you can.
 
-If you'd like to export object from the unit, you have to extend it's class from _UnitObject_. The unit becomes object's factory, while the object exports own's methods.
+If you'd like to export `any` object which can not be cloned, just do it. The unit becomes an objects's factory, while the object exports own methods. Technically, the object will live in the unit's thread but you may call it's methods from other threads.
 
-Technically, the object lives in the unit's thread but you may call it's methods from other threads.
+<a name="unit_emitter"></a>
 
-> Note, there is no [units](#units) property in _UnitObject_.
+### Emitters
 
-The object is event emitter and you may subscribe on events fired by it:
+if you'd like to fire events from the object, extend it's class with _Emitter_ class:
 
 ```typescript
-// to subscribe on event
+class MyObject extends Emitter {
+  // your code
+}
+
+// fo fire event from the object:
+fire(event: string, ...args: any);
+
+// to subscribe on event:
 // returns unsubscribe function
 on(event: string, callback: (...args: any) => {
   // do things
 })
-
-// emits event to subscribers
-fire(event: string, ...args: any);
 ```
 
 Usage:
@@ -226,11 +230,7 @@ Usage:
 `./units/one.js`
 
 ```typescript
-class MyObject extends UnitObject {
-  constructor(...args) {
-    super();
-    // init with args
-  }
+class MyObject extends Emitter {
   method(...args) {
     // do things
     // fire event
@@ -243,8 +243,9 @@ class MyObject extends UnitObject {
   }
 }
 
-export default Unit.instance(
-  class extends Unit {
+// as a factory
+export default Unit(
+  class {
     MyObject(...args) {
       return new MyObject(...args);
     }
@@ -279,9 +280,9 @@ off();
 
 <a name="transferable"></a>
 
-### Transferable
+### Transferables
 
-To send [transferable](https://developer.mozilla.org/docs/Web/API/Transferable) objects from one unit to another just pass them as arguments of methods.
+To send [transferable](https://developer.mozilla.org/docs/Web/API/Transferable) objects from one unit to another just pass them as arguments of methods. You may return such objects as well.
 
 The following classes like [ArrayBuffer](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer), [ImageBitmap](https://developer.mozilla.org/docs/Web/API/ImageBitmap) and [OffscreenCanvas](https://developer.mozilla.org/docs/Web/API/OffscreenCanvas) are supported.
 
@@ -320,12 +321,12 @@ To extend unit's functionality from the main thread side you may use web worker'
 
 But with the _Uman_ you don't need to.
 
-For example, if you know "unit" will always be as _shared worker_:
+Usage:
 
 `index.js`
 
 ```typescript
-class Adapter extends UnitSharedWorker {
+class Adapter {
   progress(persent) {
     // do something
   }
@@ -333,6 +334,7 @@ class Adapter extends UnitSharedWorker {
 
 main.add({
   unit: {
+    // see Manager.add
     loader: () => new SharedWorker("unit.js"),
     adapter: Adapter
   }
@@ -344,63 +346,17 @@ main.units.unit.dothings();
 `unit.js`
 
 ```typescript
-class MyUnit extends UnitSharedWorkerSelf {
-  // your ES6+ class
-  dothings() {
-    this.progress(0);
-    // do things...
-    this.progress(100);
+export default Unit(
+  class {
+    // your ES6+ class
+    dothings() {
+      this.progress(0);
+      // do things...
+      this.progress(100);
+    }
   }
-}
-
-new MyUnit();
+);
 ```
-
-<a name="unit_worker"></a>
-
-### UnitWorker
-
-[Adapter](#adapters) to create worker part of web worker unit.
-
-```typescript
-UnitWorker(worker: Worker);
-```
-
-It's created automatically if you initialize the unit with [Worker](https://developer.mozilla.org/docs/Web/API/Worker).
-
-The base class for the script part will be _UnitWorkerSelf_.
-
-<a name="unit_shared_worker"></a>
-
-### UnitSharedWorker
-
-[Adapter](#adapters) to create shared worker part of shared worker unit.
-
-```typescript
-UnitSharedWorker(worker: SharedWorker);
-```
-
-It's created automatically if you initialize the unit with [SharedWorker](https://developer.mozilla.org/docs/Web/API/SharedWorker).
-
-The base class for the script part will be _UnitSharedWorkerSelf_.
-
-<a name="unit_service_worker"></a>
-
-### UnitServiceWorker
-
-[Adapter](#adapters) to create service worker part of service worker unit.
-
-> Note, the service worker has to be registered.
-
-> Don't forget to use https and trusted SSL certificate.
-
-```typescript
-UnitServiceWorker(worker: window.navigator.serviceWorker);
-```
-
-It's created automatically if you initialize the unit with [ServiceWorker](https://developer.mozilla.org/docs/Web/API/ServiceWorkerContainer).
-
-The base class for the script part will be _UnitServiceWorkerSelf_.
 
 ## License
 
