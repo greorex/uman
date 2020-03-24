@@ -40,13 +40,10 @@ export class Packager {
         }
       },
       _value = (k, v, replacer) => {
-        // only objects and functions
         switch (v && typeof v) {
           case "object":
           case "function":
-            if (replacer) {
-              v = replacer(k, v);
-            }
+            v = replacer(k, v);
             if (Array.isArray(v)) {
               for (let i = 0, l = v.length; i < l; i++) {
                 _entry(v, i, replacer);
@@ -77,7 +74,7 @@ export class Packager {
           return data;
       }
 
-      return _value("", data, replacer);
+      return replacer ? _value("", data, replacer) : data;
     };
 
     this.unpack = (data, reviver = null) => {
@@ -86,7 +83,9 @@ export class Packager {
           ? new BufferReader(data).value(reviver)
           : typeof data === "string"
           ? JSON.parse(data, reviver)
-          : _value("", data, reviver);
+          : reviver
+          ? _value("", data, reviver)
+          : data;
 
       // unsign
       if (unpacked && (!signature || unpacked[signature] === key)) {

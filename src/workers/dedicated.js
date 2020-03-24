@@ -42,10 +42,12 @@ export default class DedicatedSelf extends WorkerHandler {
   }
 
   async start(...args) {
-    return this._unit.start(...args);
+    await super.start(...args);
+    await this._unit.start(...args);
   }
 
   async terminate(...args) {
-    return this._unit.terminate(...args);
+    await this._unit.terminate(...args);
+    await super.terminate(...args);
   }
 }
