@@ -17,7 +17,6 @@ With [webpack](https://webpack.js.org/), for example, you may use:
 Inline syntax is supported:
 
 ```javascript
-// means main unit -> "main"
 const main = new Unit(Manager)();
 
 main.add({

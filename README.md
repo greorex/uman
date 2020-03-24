@@ -86,7 +86,7 @@ To run tasks in separate workers and communicate between them:
 `index.js`
 
 ```javascript
-const main = new UnitMain();
+const main = new Unit(Manager)();
 
 // set up units
 main.add({

@@ -29,9 +29,9 @@ Special:
 
 <a name="units_manager"></a>
 
-### UnitsManager
+### Manager
 
-Class to create manager.
+Class to create units manager.
 
 ```typescript
 Manager(units?: Object); // see add
