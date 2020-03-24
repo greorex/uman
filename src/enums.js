@@ -14,7 +14,7 @@
  * message types enum
  */
 export const MessageType = {
-  EVENT: -1,
+  EVENT: 1,
   REQUEST: 2,
   RESPONSE: 3,
   RECEIPT: 4,
