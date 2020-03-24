@@ -10,21 +10,23 @@
 
 // @ts-check
 
-import { UnitWorkerSelf } from "./dedicated";
+import ServiceSelf from "./service";
 
 /**
  * list of clients
  */
-let clientsList = [];
+const clientsList = new Set();
 
 /**
- * shared worker adapter
+ * local shared worker adapter
  */
-class Adapter {
+class _Adapter {
   constructor(engine) {
     // to all clients
     this.postMessage = (...args) => {
-      for (let port of clientsList) port.postMessage(...args);
+      for (const port of clientsList) {
+        port.postMessage(...args);
+      }
     };
 
     // new client
@@ -33,7 +35,7 @@ class Adapter {
 
       port.addEventListener("message", event => {
         // engine to reply
-        event.data && (event.data.engine = port);
+        event._engine = port;
         // @ts-ignore
         this.onmessage(event);
       });
@@ -41,38 +43,32 @@ class Adapter {
       port.start();
 
       // to broadcast
-      clientsList.push(port);
+      clientsList.add(port);
     });
   }
 }
 
 /**
- * unit base for shared worker script file
+ * unit handler for shared worker script file
  */
-export class UnitSharedWorkerSelf extends UnitWorkerSelf {
-  constructor(engine = new Adapter(self)) {
-    super(engine);
-
-    // active
-    this.engine = null;
-
-    // proper engine
-    this._engine = data => {
-      if (data.engine) this.engine = data.engine;
-      return this.engine ? this.engine : engine;
-    };
+export default class SharedSelf extends ServiceSelf {
+  constructor(engine) {
+    super(engine ? engine : new _Adapter(self));
   }
 
-  async _onterminate() {
-    // active engine
-    const engine = this.engine;
+  // override
+  async terminate() {
+    // last active engine
+    const engine = this._engine();
     // stop
-    await super._onterminate();
+    await super.terminate();
     // update list
     if (engine) {
-      clientsList = clientsList.filter(c => c !== engine);
+      clientsList.delete(engine);
       // no clients, terminate
-      if (!clientsList.length) close();
+      if (!clientsList.size) {
+        close();
+      }
     }
   }
 }

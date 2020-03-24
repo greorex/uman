@@ -10,88 +10,99 @@
 
 // @ts-check
 
-import { MessageType } from "./enums";
-import options from "./options";
-import { UnitsProxy } from "./proxy";
-import { UnitCallsEngine } from "./calls";
-import { UnitEventEmitter } from "./emitter";
-
-// locals
-const EVENT = MessageType.EVENT;
-const REQUEST = MessageType.REQUEST;
+import { MessageType as MT } from "./enums";
+import Emitter from "./emitter";
+import Handler from "./handler";
+import WorkerHandler from "./worker";
 
 /**
- * unit base call engine
+ * Unit base for all units
  */
-export class UnitBase extends UnitEventEmitter {
-  constructor() {
+export default class Base extends Emitter {
+  constructor(handler, adapter = null) {
     super();
-
-    this.options = { ...options };
-
-    // manager engine
-    this.name = "";
-    this.units = new UnitsProxy(this);
-    this._redispatch = data => this._dispatch(data);
-
-    // call engine
-    this._calls = new UnitCallsEngine(this);
 
     // no then function
     // if promise check
     this.then = undefined;
 
-    // proxy engine
-    return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        // own asked
-        if (prop in t) return Reflect.get(t, prop, receiver);
-        // method asked
-        return (...args) =>
-          receiver._dispatch({
-            type: REQUEST,
-            target: receiver.name,
-            method: prop,
-            args
-          });
+    // check
+    if (!(handler instanceof Handler)) {
+      throw new Error(`${handler} is not a Handler based`);
+    }
+
+    // set it up
+    this.name = handler.name;
+    this.units = handler.units;
+    this.options = handler.options;
+    this.start = async (...args) => handler.start(...args);
+    this.terminate = async (...args) => handler.terminate(...args);
+
+    // attach
+    this._handler = handler;
+
+    // final
+    let unit = this;
+
+    // worker?
+    if (handler instanceof WorkerHandler) {
+      // standard
+      this.postMessage = (...args) => handler.postMessage(...args);
+      // @ts-ignore
+      handler.onmessage = event => this.onmessage && this.onmessage(event);
+
+      // to self and back
+      this.post = (event, ...args) =>
+        handler.dispatch({
+          type: MT.EVENT,
+          method: event,
+          args
+        });
+
+      // proxy routine
+      unit = new Proxy(this, {
+        get: (t, prop) =>
+          prop in t
+            ? t[prop]
+            : (...args) =>
+                handler.dispatch({
+                  type: MT.REQUEST,
+                  target: handler.name,
+                  method: prop,
+                  args
+                })
+      });
+    }
+
+    // adapter?
+    if (adapter) {
+      if (typeof adapter === "object") {
+        // as {}
+        if (Object.getPrototypeOf(adapter) !== Object.prototype) {
+          throw new Error(`${adapter} is not a simple object`);
+        }
+        // just copy
+        unit = Object.assign(unit, adapter);
+      } else {
+        // as class
+        if (!(typeof adapter === "function" && adapter.constructor)) {
+          throw new Error(`${adapter} is not a class`);
+        }
+        // set Base as a prototype
+        let prototype = adapter.prototype;
+        for (
+          let p = Object.getPrototypeOf(prototype);
+          p !== Object.prototype && p !== Function.prototype;
+          p = Object.getPrototypeOf(p)
+        ) {
+          prototype = p;
+        }
+        Object.setPrototypeOf(prototype, unit);
+        // create unit
+        unit = new adapter();
       }
-    });
-  }
-
-  async start() {}
-
-  async terminate() {}
-
-  _onevent(data) {
-    const { method, args, sender } = data;
-    // new routine
-    if (!sender)
-      // sibscribers of this
-      this.fire(method, ...args);
-    else {
-      const p = this.units[sender];
-      // sibscribers of sender
-      if (p) p.fire(method, ...args);
-      // sibscribers of units
-      this.units.fire(method, sender, ...args);
     }
-  }
 
-  _oncall(data) {
-    const { method, args } = data;
-    if (!(method in this))
-      throw new Error(`Method ${method} has to be declared in ${data.target}`);
-    // may be async as well
-    return this[method](...args);
-  }
-
-  _dispatch(data) {
-    switch (data.type) {
-      case REQUEST:
-        return this._calls._oncall(data, this);
-
-      case EVENT:
-        this._onevent(data);
-    }
+    return (handler._unit = unit);
   }
 }

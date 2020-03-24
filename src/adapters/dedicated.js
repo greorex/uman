@@ -10,50 +10,52 @@
 
 // @ts-check
 
-import { UnitWorkerEngine } from "../worker";
+import { MessageType as MT } from "../enums";
+import WorkerHandler from "../worker";
 
 /**
- * unit base for worker adapter
+ * handler to redispatch from worker unit
  */
-export class UnitWorker extends UnitWorkerEngine {
+export default class Dedicated extends WorkerHandler {
   constructor(worker) {
     super(worker);
+  }
 
-    this.terminate = async () => {
-      // tell worker self
-      // @ts-ignore
-      await this._onterminate();
-      // drop engine
-      worker.terminate();
-    };
+  // override
 
-    this.start = async () => {
-      // tell worker self
-      // @ts-ignore
-      await this._onstart(this.name, this.options);
-    };
+  // to tell worker script
+  async start(...args) {
+    return this.dispatch({
+      type: MT.START,
+      args: [this.name, this.options, ...args]
+    });
+  }
+
+  async terminate(...args) {
+    await this.dispatch({
+      type: MT.TERMINATE,
+      args
+    });
+    this._engine().terminate();
+    return super.terminate(...args);
+  }
+
+  // to redispatch
+  onevent(data) {
+    return data.target ? this.redispatch(data) : super.onevent(data);
+  }
+
+  oncall(data) {
+    return data.target ? this.redispatch(data) : super.oncall(data);
   }
 
   static loader() {
     return [
-      ({ loader, adapter }) => {
+      ({ loader }) => {
         if (loader instanceof Worker) {
-          // use default
-          if (!adapter) adapter = UnitWorker;
-          // done
-          return new adapter(loader);
+          return new Dedicated(loader);
         }
       }
     ];
-  }
-
-  _onevent(data) {
-    if (data.target) return this._redispatch(data);
-    return super._onevent(data);
-  }
-
-  _oncall(data) {
-    if (data.target) return this._redispatch(data);
-    return super._oncall(data);
   }
 }

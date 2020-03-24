@@ -10,116 +10,157 @@
 
 // @ts-check
 
-import { TargetType } from "./enums";
-import { UnitBase } from "./base";
-import { UnitLoader } from "./loader";
-import { Unit } from "./unit";
+import { TargetType as TT } from "./enums";
 import CS from "./critical";
-
-// locals
-const ALL = TargetType.ALL;
+import Handler from "./handler";
+import Loader from "./loader";
+import Base from "./base";
 
 /**
  * units orchestration engine
  */
-export class UnitsManager extends Unit {
+export default class ManagerHandler extends Handler {
   constructor(units = {}) {
     super();
 
     // critical sections
-    this._loader = new CS();
-
+    this.starter = new CS();
     // real list
-    this._units = {};
+    this.handlers = {};
+
     // copy entries
     this.add(units);
-
-    // override redispatcher
-    this._redispatch = async data => {
-      const { target, sender } = data;
-      switch (target) {
-        case ALL:
-          // to all loaded except sender
-          for (let [name, unit] of Object.entries(this._units))
-            if (name !== sender && unit instanceof UnitBase)
-              unit._dispatch(data);
-          return;
-
-        default:
-          // to target, load if doesn't
-          const unit = await this.start(target);
-          if (unit) return unit._dispatch(data);
-      }
-
-      // not a unit or wrong target
-      throw new Error(`Wrong target unit: ${target}`);
-    };
   }
 
-  async start(name = null) {
-    if (name) {
-      // get
-      let unit = this._units[name];
-      if (unit instanceof UnitBase) return unit;
-      // load if doesn't
-      if (unit)
-        return this._loader.enter(async (leave, reject) => {
-          try {
-            unit = await unit.instance();
-            this._attach(name, unit);
-            await unit.start();
-            leave(unit);
-          } catch (error) {
-            reject(error);
-          }
-        });
+  select(filter = "all") {
+    const handler = this.handlers[filter],
+      replacer = h => (h instanceof Handler ? h._unit : h);
+    // unit?
+    if (handler) {
+      return replacer(handler);
     }
+    // as array
+    const all = Object.values(this.handlers).map(replacer);
+    // by filter or all
+    return filter === "loaded" ? all.filter(v => v instanceof Base) : all;
   }
 
-  _attach(name, unit) {
-    unit.name = name;
+  // override
+  async redispatch(data) {
+    const { target, sender } = data;
+    switch (target) {
+      case TT.ALL:
+        // to all loaded except sender
+        for (const [name, handler] of Object.entries(this.handlers)) {
+          if (name !== sender && handler instanceof Handler) {
+            handler.dispatch(data);
+          }
+        }
+        return;
+
+      default:
+        // to target, load if doesn't
+        const handler = await this.start(target);
+        if (handler) {
+          return handler.dispatch(data);
+        }
+    }
+
+    // not a unit or wrong target
+    throw new Error(`Wrong target unit: ${target}`);
+  }
+
+  attach(name, unit) {
+    const { _handler } = unit;
+    // set it up
+    _handler._unit.name = _handler.name = name;
     // common
-    // @ts-ignore
-    unit._calls = this._calls;
-    unit._redispatch = data => this._redispatch(data);
+    if (_handler !== this) {
+      _handler.calls = this.calls;
+      _handler.redispatch = data => this.redispatch(data);
+    }
     // update list
-    this._units[name] = unit;
+    return (this.handlers[name] = _handler);
   }
 
   add(units) {
     for (let [name, loader] of Object.entries(units)) {
       // check duplication
-      if (this._units[name]) throw new Error(`Unit ${loader} already exists`);
+      if (this.handlers[name]) {
+        throw new Error(`Unit ${name} already exists`);
+      }
       // check name (simple)
-      if (typeof name !== "string" || "post" === name)
-        throw new Error(`Wrong unit name: ${name}`);
+      switch (name) {
+        // !methods
+        case "then":
+        case "post":
+        case "fire":
+        case "on":
+        case "all":
+        case "loaded":
+          throw new Error(`Wrong unit name: ${name}`);
+      }
       // unit isn't lazy?
-      if (loader instanceof UnitBase) this._attach(name, loader);
-      // update list
-      else if (!loader) throw new Error(`Wrong loader for unit: ${name}`);
-      else {
-        if ("loader" in loader) loader.name = name;
-        else loader = { loader, name };
+      if (loader instanceof Base) {
+        this.attach(name, loader);
+      } else {
         // as loader
-        this._units[name] = new UnitLoader(loader);
+        if (!loader) {
+          throw new Error(`Wrong loader for unit: ${name}`);
+        }
+
+        if (loader.loader) {
+          loader.name = name;
+        } else {
+          loader = { loader, name };
+        }
+
+        // update list
+        this.handlers[name] = new Loader(loader);
       }
     }
   }
 
-  async terminate(name = null) {
-    const _terminate = async key => {
-      const unit = this._units[key];
-      // stop it if loaded
-      if (unit instanceof UnitBase) await unit.terminate();
-      // drop it
-      if (unit) delete this._units[key];
-    };
+  async start(name) {
+    if (!name) {
+      return;
+    }
+    // get
+    let handler = this.handlers[name];
+    // loaded?
+    if (handler instanceof Handler) {
+      return handler;
+    }
+    // not yet, load
+    if (handler instanceof Loader) {
+      return this.starter.enter(async (leave, reject) => {
+        try {
+          const unit = await handler.instance();
+          handler = this.attach(name, unit);
+          await unit.start();
+          leave(handler);
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  }
 
-    if (name) await _terminate(name);
-    else {
-      // do not delete this
-      for (let [key, unit] of Object.entries(this._units))
-        if (unit !== this) await _terminate(key);
+  async terminate(name) {
+    if (name) {
+      // by name
+      const unit = this.select(name);
+      if (unit instanceof Base) {
+        await unit.terminate();
+      }
+      delete this.handlers[name];
+    } else {
+      // all but this
+      for (const [key, handler] of Object.entries(this.handlers)) {
+        if (handler !== this) {
+          await this.terminate(key);
+        }
+      }
     }
   }
 }

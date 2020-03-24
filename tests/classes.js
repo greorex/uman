@@ -1,11 +1,11 @@
-import { UnitObject, UnitMain, UnitWorker } from "uman";
+import { Unit, Emitter, Manager } from "uman";
 import { render } from "./engine";
 import { pureTest, pureSum } from "./pure";
 
 /**
  * to test objects
  */
-export class TestsObject extends UnitObject {
+export class TestsObject extends Emitter {
   sum(arr) {
     this.fire("sum", arr);
     return pureSum(arr);
@@ -15,16 +15,16 @@ export class TestsObject extends UnitObject {
 /**
  * to test adapters
  */
-export class Adapter extends UnitWorker {
+export const Adapter = {
   sum(arr) {
     return pureSum(arr);
   }
-}
+};
 
 /**
  * to test manager
  */
-export class Main extends UnitMain {
+export class Main extends Unit(Manager) {
   constructor() {
     super();
 
@@ -40,9 +40,15 @@ export class Main extends UnitMain {
 
     if (result === "passed") {
       const t0 = performance.now();
-      for (let i = times; i--; ) await this.units.tests.pureTest(arr);
+      for (let i = times; i--; ) {
+        // call + proxy + worker + async
+        await this.units.tests.pureTest(arr);
+      }
       const t1 = performance.now();
-      for (let i = times; i--; ) pureTest(arr);
+      for (let i = times; i--; ) {
+        // call
+        pureTest(arr);
+      }
       const t2 = performance.now();
 
       const ams = d => (d / times).toFixed(3);
@@ -78,12 +84,35 @@ export class Main extends UnitMain {
     this.units.one.on("testMisconception", () => {
       this.units.post("log", "main.units.one.ontestMisconception");
     });
-    // try to pass UnitObject or Unit
+    // try to pass Object or Unit
     const result = await this.units.tests.testMisconception(
       { object, one: this.units.one },
       arr
     );
     return result;
+  }
+
+  async testTransferables(arr) {
+    const arrBuf = new ArrayBuffer(arr.length * 4);
+    // copy arr
+    let i32a = new Int32Array(arrBuf);
+    for (let i = 0; i < arr.length; i++) i32a[i] = arr[i];
+    // send 2 buffers
+    let result = await this.units.tests.testTransferables(
+      arrBuf,
+      new ArrayBuffer(arr.length * 16)
+    );
+    // has to be 0 after
+    // if (arrBuf.byteLength) return "failed";
+    // and back
+    i32a = new Int32Array(result[0]);
+    // check second
+    if (result[1].byteLength !== arr.length * 16) return "failed";
+    // sum
+    result = 0;
+    for (let i = 0; i < i32a.length; i++) result += i32a[i];
+
+    return result === pureSum(arr) ? "passed" : "failed";
   }
 
   TestsObject() {

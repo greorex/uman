@@ -19,8 +19,8 @@ Do not forget to [bundle](howtobundle.md) it and test.
 ```javascript
 import { Unit } from "uman";
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     // returns sum of array's elements
     sum(arr) {
       return arr.reduce((r, i) => (r += i), 0);
@@ -45,8 +45,8 @@ export default Unit.instance(
 ```javascript
 import { Unit } from "uman";
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     // returns cubes of array's elements
     cubes(arr) {
       return arr.map(i => i ** 3);
@@ -64,11 +64,11 @@ export default Unit.instance(
 ```javascript
 import { Unit } from "uman";
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     async run(arr) {
       const units = this.units;
-      const { one } = units;
+      const { one, two } = units;
 
       // call method "sum" of Unit One
       one
@@ -77,7 +77,7 @@ export default Unit.instance(
 
       const sum = await Promise.all([
         // call method "cubes" of Unit Two
-        one.sum(await units.two.cubes(arr)),
+        one.sum(await two.cubes(arr)),
         one.sumofcubes(arr)
       ]);
 
@@ -96,10 +96,9 @@ export default Unit.instance(
 ```javascript
 import { Unit } from "uman";
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     constructor() {
-      super();
       // to catch "log" events from all units
       this.units.on("log", (sender, message) => {
         console.log(sender + ": " + message);
@@ -116,10 +115,10 @@ export default Unit.instance(
 `index.js`
 
 ```javascript
-import { UnitMain, Unit } from "uman";
+import { Unit, Manager } from "uman";
 
 // main class to run app
-class Main extends UnitMain {
+class Main extends Unit(Manager) {
   constructor() {
     super();
 

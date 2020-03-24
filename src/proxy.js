@@ -10,47 +10,92 @@
 
 // @ts-check
 
-import { MessageType, TargetType } from "./enums";
-import { UnitEventEmitter } from "./emitter";
-
-// locals
-const EVENT = MessageType.EVENT;
-const REQUEST = MessageType.REQUEST;
-const ALL = TargetType.ALL;
+import { MessageType as MT, TargetType as TT } from "./enums";
+import Emitter from "./emitter";
 
 /**
- * Units proxy target engine
+ * to call object's methods
  */
-export class UnitsProxyTarget extends UnitEventEmitter {
+export class ProxyObject {
+  constructor(handler, ref) {
+    this._ref = ref;
+
+    // no then function
+    // if promise check
+    this.then = undefined;
+
+    // no toJSON
+    this.toJSON = undefined;
+
+    return new Proxy(this, {
+      get: (t, prop) =>
+        prop in t
+          ? // if own asked
+            t[prop]
+          : // unit knows
+            (...args) =>
+              handler.redispatch({
+                type: MT.REQUEST,
+                target: ref.owner,
+                handler: ref,
+                method: prop,
+                args
+              })
+    });
+  }
+}
+
+/**
+ * units proxy base
+ */
+class ProxyBase extends Emitter {
   constructor(handler, target) {
     super();
 
-    this._target = target;
+    // no then function
+    // if promise check
+    this.then = undefined;
 
+    // no toJSON
+    this.toJSON = undefined;
+
+    // 1. unit.units.post(method, ...args) -> to all units
     // 2. other.post(method, ...args) -> to other
     this.post = (method, ...args) =>
-      handler._redispatch({
-        type: EVENT,
-        target,
+      handler.redispatch({
+        type: MT.EVENT,
+        target: target,
         sender: handler.name,
         method,
         args
       });
+  }
+}
+
+/**
+ * units proxy target engine
+ */
+export class ProxyTarget extends ProxyBase {
+  constructor(handler, target) {
+    super(handler, target);
+
+    this._target = target;
+
     // 3. async other.method(...args) -> call other's method
     // 4. set other.onevent(...args)
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        // if own asked, 'onmethod'
-        if (prop in t) return Reflect.get(t, prop, receiver);
-        // request method
-        return (...args) =>
-          handler._redispatch({
-            type: REQUEST,
-            target,
-            method: prop,
-            args
-          });
-      }
+      get: (t, prop) =>
+        prop in t
+          ? // if own asked, 'onmethod'
+            t[prop]
+          : // request method
+            (...args) =>
+              handler.redispatch({
+                type: MT.REQUEST,
+                target,
+                method: prop,
+                args
+              })
     });
   }
 }
@@ -58,28 +103,18 @@ export class UnitsProxyTarget extends UnitEventEmitter {
 /**
  * Units fast access to other units
  */
-export class UnitsProxy extends UnitEventEmitter {
+export default class extends ProxyBase {
   constructor(handler) {
-    super();
-
-    // 1. unit.units.post(method, ...args) -> to all units
-    this.post = (method, ...args) =>
-      handler._redispatch({
-        type: EVENT,
-        target: ALL,
-        sender: handler.name,
-        method,
-        args
-      });
+    super(handler, TT.ALL);
 
     // const other = unit.units.other;
     return new Proxy(this, {
-      get: (t, prop, receiver) => {
-        let value = Reflect.get(t, prop, receiver);
+      get: (t, prop) => {
+        let value = t[prop];
         if (!value) {
           // asume "other" asked
-          value = new UnitsProxyTarget(handler, prop);
-          Reflect.set(t, prop, value, receiver);
+          value = new ProxyTarget(handler, prop);
+          t[prop] = value;
         }
         return value;
       }

@@ -1,9 +1,10 @@
 import { render, describe, test, beforeAll, expect } from "./engine";
 import { Main, Adapter } from "./classes";
-import { name, version, options, UnitLoader, UnitsManager } from "uman";
+import { name, version, options, Unit, PackagerMethod as PM } from "uman";
 
 // to debug...
-options.timeout = 0;
+// options.timeout = 0;
+options.packager = PM.OBJECT;
 
 /**
  * tests
@@ -19,7 +20,7 @@ describe(`${name}, v${version}`, () => {
     main.add({
       log: () => import("./units/log"),
       one: () => import("worker-loader!./units/one"),
-      two: () => import("sharedworker-loader!./units/two"),
+      two: () => import("./units/two"),
       tests: () => import("sharedworker-loader!./units/tests")
       // tests: {
       //   loader: () => import("service-worker-loader!./units/tests"),
@@ -31,7 +32,7 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("no manager", async () => {
-    const unit = await UnitLoader.instance({
+    const unit = await Unit({
       loader: import("worker-loader!./units/tests.js"),
       adapter: Adapter
     });
@@ -54,14 +55,14 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("main unit created", () => {
-    expect(main).toBeInstanceOf(UnitsManager);
+    expect(main).toBeInstanceOf(Main);
     // check real list
-    expect(main._units.main).toBeInstanceOf(Main);
+    expect(main.select("main")).toBeInstanceOf(Main);
   });
 
   test("other units added", () => {
     // check real list
-    expect(Object.keys(main._units).length).toEqual(5);
+    expect(main.select("all").length).toEqual(5);
   });
 
   test("methods and events", async () => {
@@ -92,16 +93,21 @@ describe(`${name}, v${version}`, () => {
     expect(result).toEqual("passed");
   });
 
+  test("transferables", async () => {
+    const result = await main.testTransferables(testArray);
+    expect(result).toEqual("passed");
+  });
+
   test("unit 'tests' terminated", async () => {
     await main.terminate("tests");
     // check real list
-    expect(Object.keys(main._units).length).toEqual(4);
+    expect(main.select("all").length).toEqual(4);
   });
 
   test("other units terminated", async () => {
     await main.terminate();
     // check real list
-    expect(Object.keys(main._units).length).toEqual(1);
-    expect(main._units.main).toBeInstanceOf(Main);
+    expect(main.select("all").length).toEqual(1);
+    expect(main.select("main")).toBeInstanceOf(Main);
   });
 });

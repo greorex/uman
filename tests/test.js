@@ -1,5 +1,5 @@
 import { Main } from "./classes";
-import { name, version, UnitsManager } from "uman";
+import { name, version } from "uman";
 
 /**
  * tests
@@ -23,14 +23,14 @@ describe(`${name}, v${version}`, () => {
   });
 
   test("main unit created", () => {
-    expect(main).toBeInstanceOf(UnitsManager);
+    expect(main).toBeInstanceOf(Main);
     // check real list
-    expect(main._units.main).toBeInstanceOf(Main);
+    expect(main.select("main")).toBeInstanceOf(Main);
   });
 
   test("other units added", () => {
     // check real list
-    expect(Object.keys(main._units).length).toEqual(5);
+    expect(main.select("all").length).toEqual(5);
   });
 
   test("methods and events", async () => {
@@ -61,16 +61,21 @@ describe(`${name}, v${version}`, () => {
     expect(result).toEqual("passed");
   });
 
+  test("transferables", async () => {
+    const result = await main.testTransferables(testArray);
+    expect(result).toEqual("passed");
+  });
+
   test("unit 'tests' terminated", async () => {
     await main.terminate("tests");
     // check real list
-    expect(Object.keys(main._units).length).toEqual(4);
+    expect(main.select("all").length).toEqual(4);
   });
 
   test("all other units terminated", async () => {
     await main.terminate();
     // check real list
-    expect(Object.keys(main._units).length).toEqual(1);
-    expect(main._units.main).toBeInstanceOf(Main);
+    expect(main.select("all").length).toEqual(1);
+    expect(main.select("main")).toBeInstanceOf(Main);
   });
 });

@@ -14,5 +14,6 @@
  * default unit's options
  */
 export default {
-  timeout: 5 * 1000 // unit alive?
+  timeout: 5 * 1000, // unit alive?
+  packager: 0 // default || PackagerMethod
 };

@@ -10,26 +10,27 @@
 
 // @ts-check
 
-import { UnitBase } from "./base";
+import Base from "./base";
 
 /**
  * loaders by order
  */
 const loadersQueue = [
   // function
-  params => {
-    const { loader } = params;
-    if (loader instanceof Function) return loader();
+  ({ loader }) => {
+    if (typeof loader === "function") {
+      return loader();
+    }
   },
   // promise
-  params => {
-    const { loader } = params;
-    if (loader instanceof Promise) return loader;
+  ({ loader }) => {
+    if (loader instanceof Promise) {
+      return loader;
+    }
   },
   // module
-  params => {
-    let { loader, args } = params;
-    if (loader && loader.default instanceof Function) {
+  ({ loader, args }) => {
+    if (loader && typeof loader.default === "function") {
       // has to be export default class
       loader = loader.default;
       if (loader && loader.constructor) {
@@ -43,33 +44,39 @@ const loadersQueue = [
 /**
  * lazy loader engine
  */
-export class UnitLoader {
+export default class Loader {
   constructor(params) {
     this.params = params;
   }
 
   async instance() {
     let { loader, name, ...rest } = this.params;
-    for (let f of loadersQueue) {
-      const unit = await f({ loader, name, ...rest });
+    for (const f of loadersQueue) {
+      let result = await f({ loader, name, ...rest });
       // loaded?
-      if (unit instanceof UnitBase) return unit;
+      if (result instanceof Base) {
+        return result;
+      }
       // try next
-      if (unit) loader = unit;
+      if (result) {
+        loader = result;
+      }
     }
 
     throw new Error(`Wrong class of unit: ${name}`);
   }
 
-  static instance(params) {
-    return new UnitLoader(params).instance();
+  static async instance(params) {
+    return new Loader(params).instance();
   }
 
   static register(loader) {
     if (Array.isArray(loader)) {
-      for (let l of loader) UnitLoader.register(l);
-    } else {
-      if (!loadersQueue.includes(loader)) loadersQueue.push(loader);
+      for (const l of loader) {
+        Loader.register(l);
+      }
+    } else if (!loadersQueue.includes(loader)) {
+      loadersQueue.push(loader);
     }
   }
 }

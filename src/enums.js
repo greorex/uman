@@ -14,16 +14,28 @@
  * message types enum
  */
 export const MessageType = {
-  EVENT: "_e",
-  REQUEST: "_r",
-  RESPONSE: "_a",
-  RECEIPT: "_t"
+  EVENT: -1,
+  REQUEST: 2,
+  RESPONSE: 3,
+  RECEIPT: 4,
+  START: 126,
+  TERMINATE: 127
 };
 
 /**
  * target types enum
  */
 export const TargetType = {
-  ALL: "all",
+  ALL: 0xff,
   THIS: 0
+};
+
+/**
+ * refernce types enum
+ */
+export const ReferenceType = {
+  OBJECT: 1,
+  FUNCTION: 2,
+  UNIT: 3,
+  TRANSFER: 4
 };

@@ -13,17 +13,19 @@
 /**
  * simple event emitter
  */
-export class UnitEventEmitter {
+export default class Emitter {
   constructor() {
     // private
     const _listeners = {};
 
     // subscribes on event
     this.on = (event, f) => {
-      if (!(f instanceof Function))
+      if (typeof f !== "function")
         throw new Error(`Wrong type of listener for ${event}`);
       let el = _listeners[event];
-      if (!el) el = _listeners[event] = [];
+      if (!el) {
+        el = _listeners[event] = [];
+      }
       el.push(f);
       // returns off function
       return () => {
@@ -34,7 +36,11 @@ export class UnitEventEmitter {
     // emits event
     this.fire = (event, ...args) => {
       const el = _listeners[event];
-      if (el) el.every(f => f(...args));
+      if (el) {
+        for (const f of el) {
+          f(...args);
+        }
+      }
     };
   }
 }

@@ -42,7 +42,7 @@ class TestEngine {
       // @ts-ignore
       this.beforeAll && (await this.beforeAll());
 
-      for (let item of this.queue) {
+      for (const item of this.queue) {
         await this.runTest(item);
       }
     } catch (error) {

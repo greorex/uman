@@ -1,14 +1,14 @@
-import { Unit, UnitObject } from "uman";
+import { Unit, Emitter } from "uman";
 
-class OneObject extends UnitObject {
+class OneObject extends Emitter {
   async test({ testsObject, arr }) {
     this.fire("test");
     return await testsObject.sum(arr);
   }
 }
 
-export default Unit.instance(
-  class extends Unit {
+export default Unit(
+  class {
     // returns sum of array's elements
     sum(arr) {
       return arr.reduce((r, i) => (r += i), 0);

@@ -10,24 +10,44 @@
 
 // @ts-check
 
-import { UnitWorkerEngine } from "../worker";
+import { MessageType as MT } from "../enums";
+import WorkerHandler from "../worker";
 
 /**
- * unit base for worker script file
+ * unit handler for worker script file
  */
-export class UnitWorkerSelf extends UnitWorkerEngine {
+export default class DedicatedSelf extends WorkerHandler {
   constructor(engine) {
     super(engine ? engine : self);
   }
 
-  async _onstart(name, options) {
-    this.name = name;
-    this.options = { ...options };
-    // initialize
-    await this.start();
+  // override
+
+  oncall(data) {
+    switch (data.type) {
+      case MT.START: {
+        const [name, options, ...args] = data.args;
+        // set it up
+        this._unit.name = this.name = name;
+        this.options = { ...options };
+        // run
+        return this.start(...args);
+      }
+      case MT.TERMINATE:
+        // stop
+        return this.terminate(...data.args);
+    }
+
+    return super.oncall(data);
   }
 
-  async _onterminate() {
-    await this.terminate();
+  async start(...args) {
+    await super.start(...args);
+    await this._unit.start(...args);
+  }
+
+  async terminate(...args) {
+    await this._unit.terminate(...args);
+    await super.terminate(...args);
   }
 }

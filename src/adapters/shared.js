@@ -10,25 +10,23 @@
 
 // @ts-check
 
-import { UnitWorker } from "./dedicated";
+import Dedicated from "./dedicated";
 
 /**
- * to control shared worker
+ * local adapter to control shared worker
  */
-class Adapter {
+class _Adapter {
   constructor(worker) {
-    this.postMessage = (...args) => {
-      worker.port.postMessage(...args);
-    };
-    worker.port.addEventListener("message", event => {
-      // @ts-ignore
-      this.onmessage(event);
-    });
-    worker.port.start();
-    worker.addEventListener("error", error => {
-      // @ts-ignore
-      this.onerror(error);
-    });
+    const port = worker.port;
+    if (!(port && typeof port.postMessage === "function")) {
+      throw new Error(`There is no 'postMessage' in ${worker}`);
+    }
+    this.postMessage = (...args) => port.postMessage(...args);
+    // @ts-ignore
+    port.addEventListener("message", event => this.onmessage(event));
+    port.start();
+    // @ts-ignore
+    worker.addEventListener("error", error => this.onerror(error));
   }
 
   // absent
@@ -38,20 +36,17 @@ class Adapter {
 /**
  * unit base for shared worker adapter
  */
-export class UnitSharedWorker extends UnitWorker {
+export default class Shared extends Dedicated {
   constructor(worker) {
-    super(new Adapter(worker));
+    super(new _Adapter(worker));
   }
 
   static loader() {
     return [
-      ({ loader, adapter }) => {
+      ({ loader }) => {
         // @ts-ignore
         if (loader instanceof SharedWorker) {
-          // use default
-          if (!adapter) adapter = UnitSharedWorker;
-          // done
-          return new adapter(loader);
+          return new Shared(loader);
         }
       }
     ];

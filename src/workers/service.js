@@ -10,12 +10,12 @@
 
 // @ts-check
 
-import { UnitWorkerSelf } from "./dedicated";
+import DedicatedSelf from "./dedicated";
 
 /**
- * service worker adapter
+ * local service worker adapter
  */
-class Adapter {
+class _Adapter {
   constructor(engine) {
     // new connections
     engine.addEventListener("activate", event => {
@@ -25,38 +25,49 @@ class Adapter {
     // to all controlled clients
     this.postMessage = (...args) => {
       engine.clients.matchAll().then(clients => {
-        for (let client of clients) client.postMessage(...args);
+        for (const client of clients) {
+          client.postMessage(...args);
+        }
       });
     };
 
     engine.addEventListener("message", event => {
       const promise = engine.clients.get(event.source.id).then(client => {
         // engine to reply
-        event.data && (event.data.engine = client);
+        event._engine = client;
         // @ts-ignore
         this.onmessage(event);
       });
 
       // extends life of
-      if (event.waitUntil) event.waitUntil(promise);
+      if (event.waitUntil) {
+        event.waitUntil(promise);
+      }
     });
   }
 }
 
 /**
- * unit base for service worker script file
+ * unit handler for service worker script file
  */
-export class UnitServiceWorkerSelf extends UnitWorkerSelf {
-  constructor(engine = new Adapter(self)) {
-    super(engine);
+export default class ServiceSelf extends DedicatedSelf {
+  constructor(engine) {
+    super(engine ? engine : new _Adapter(self));
 
     // active
     this.engine = null;
 
-    // proper engine
-    this._engine = data => {
-      if (data.engine) this.engine = data.engine;
-      return this.engine ? this.engine : engine;
-    };
+    // override
+    // proper engine -> last active
+    this._engine = () => (this.engine ? this.engine : engine);
+  }
+
+  // override
+  fromEvent(event) {
+    const data = super.fromEvent(event);
+    if (data) {
+      this.engine = event._engine;
+    }
+    return data;
   }
 }
