@@ -15,11 +15,11 @@ export class TestsObject extends Emitter {
 /**
  * to test adapters
  */
-export const Adapter = {
+export class Adapter {
   sum(arr) {
     return pureSum(arr);
   }
-};
+}
 
 /**
  * to test manager
