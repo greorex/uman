@@ -20,14 +20,14 @@ export default class {
     let flag = null,
       last = null;
 
-    this.start = section =>
-      new Promise(resolve => {
+    this.start = (section) =>
+      new Promise((resolve) => {
         const f = () =>
-          section(() => {
+          section((result) => {
             // last
             if (last) last(), (last = null);
             if (!last) flag = null;
-            resolve();
+            resolve(result);
           });
 
         if (flag) last = () => f();
