@@ -135,9 +135,14 @@ export default class ManagerHandler extends Handler {
     if (handler instanceof Loader) {
       return this.starter.enter(async (leave, reject) => {
         try {
-          const unit = await handler.instance();
-          handler = this.attach(name, unit);
-          await unit.start();
+          // check again
+          handler = this.handlers[name];
+          // can be loaded asynchronously
+          if (!(handler instanceof Handler)) {
+            const unit = await handler.instance();
+            handler = this.attach(name, unit);
+            await unit.start();
+          }
           leave(handler);
         } catch (error) {
           reject(error);
