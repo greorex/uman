@@ -21,6 +21,7 @@ const REFERENCE = "_ref";
 
 // if supported
 const _offscreenCanvas = typeof OffscreenCanvas === "function",
+  _imageBitmap = typeof ImageBitmap === "function",
   _bigUint64Array = typeof BigUint64Array === "function",
   _bigInt64Array = typeof BigInt64Array === "function";
 
@@ -290,7 +291,7 @@ export default class WorkerHandler extends Handler {
           // can be transfered
           if (
             v instanceof ArrayBuffer ||
-            v instanceof ImageBitmap ||
+            (_imageBitmap && v instanceof ImageBitmap) ||
             (_offscreenCanvas && v instanceof OffscreenCanvas)
           ) {
             transfer[++id] = v;

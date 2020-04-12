@@ -24,7 +24,7 @@ const uint8 = new Uint8Array(8),
  */
 class Writer {
   constructor(littleEndian = true) {
-    this.littleEndian = littleEndian;
+    this.le = littleEndian;
     this._ve = new ValueEncoder(this);
   }
 
@@ -44,35 +44,35 @@ class Writer {
     return this.byte(v < 0 ? v + 256 : v);
   }
   uint16(v) {
-    view.setUint16(0, v, this.littleEndian);
+    view.setUint16(0, v, this.le);
     return this.bytes(uint8, 2);
   }
   int16(v) {
-    view.setInt16(0, v, this.littleEndian);
+    view.setInt16(0, v, this.le);
     return this.bytes(uint8, 2);
   }
   uint32(v) {
-    view.setUint32(0, v, this.littleEndian);
+    view.setUint32(0, v, this.le);
     return this.bytes(uint8, 4);
   }
   int32(v) {
-    view.setInt32(0, v, this.littleEndian);
+    view.setInt32(0, v, this.le);
     return this.bytes(uint8, 4);
   }
   float32(v) {
-    view.setFloat32(0, v, this.littleEndian);
+    view.setFloat32(0, v, this.le);
     return this.bytes(uint8, 4);
   }
   float64(v) {
-    view.setFloat64(0, v, this.littleEndian);
+    view.setFloat64(0, v, this.le);
     return this.bytes(uint8, 8);
   }
   bigUint(v) {
-    view.setBigUint64(0, v, this.littleEndian);
+    view.setBigUint64(0, v, this.le);
     return this.bytes(uint8, 8);
   }
   bigInt(v) {
-    view.setBigInt64(0, v, this.littleEndian);
+    view.setBigInt64(0, v, this.le);
     return this.bytes(uint8, 8);
   }
 
