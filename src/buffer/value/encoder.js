@@ -21,7 +21,7 @@ const _isFinite = Number.isFinite,
   MIN_FLOAT32 = -MAX_FLOAT32;
 
 // to speed up?
-const keysCache = [];
+const keysCache = Object.create(null);
 
 // encoders
 const NATIVE = false,

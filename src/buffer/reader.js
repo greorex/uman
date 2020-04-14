@@ -25,7 +25,7 @@ const uint8 = new Uint8Array(8),
  */
 class Reader {
   constructor(littleEndian = true) {
-    this.littleEndian = littleEndian;
+    this.le = littleEndian;
     this._vd = new ValueDecoder(this);
   }
 
@@ -55,37 +55,37 @@ class Reader {
 
   uint16() {
     uint8.set(this.bytes(2));
-    return view.getUint16(0, this.littleEndian);
+    return view.getUint16(0, this.le);
   }
 
   int16() {
     uint8.set(this.bytes(2));
-    return view.getInt16(0, this.littleEndian);
+    return view.getInt16(0, this.le);
   }
   uint32() {
     uint8.set(this.bytes(4));
-    return view.getUint32(0, this.littleEndian);
+    return view.getUint32(0, this.le);
   }
 
   int32() {
     uint8.set(this.bytes(4));
-    return view.getInt32(0, this.littleEndian);
+    return view.getInt32(0, this.le);
   }
   float32() {
     uint8.set(this.bytes(4));
-    return view.getFloat32(0, this.littleEndian);
+    return view.getFloat32(0, this.le);
   }
   float64() {
     uint8.set(this.bytes(8));
-    return view.getFloat64(0, this.littleEndian);
+    return view.getFloat64(0, this.le);
   }
   bigUint() {
     uint8.set(this.bytes(8));
-    return view.getBigUint64(0, this.littleEndian);
+    return view.getBigUint64(0, this.le);
   }
   bigInt() {
     uint8.set(this.bytes(8));
-    return view.getBigInt64(0, this.littleEndian);
+    return view.getBigInt64(0, this.le);
   }
 
   // any json value
